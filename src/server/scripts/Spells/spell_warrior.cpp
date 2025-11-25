@@ -685,6 +685,11 @@ public:
 
         void Register() OVERRIDE
         {
+            // MoP DBC only provides a single effect for Second Wind that alternates between
+            // periodic damage (spell 113344) and a dummy aura (spell 125667) depending on spec.
+            // Keep legacy registrations as fallbacks so the handler runs regardless of data layout.
+            OnEffectPeriodic += AuraEffectPeriodicFn(spell_warr_second_wind_heal_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
+            OnEffectPeriodic += AuraEffectPeriodicFn(spell_warr_second_wind_heal_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_DUMMY);
             OnEffectPeriodic += AuraEffectPeriodicFn(spell_warr_second_wind_heal_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
             OnEffectPeriodic += AuraEffectPeriodicFn(spell_warr_second_wind_heal_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_HEAL);
         }
