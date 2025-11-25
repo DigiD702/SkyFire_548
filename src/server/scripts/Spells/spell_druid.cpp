@@ -628,40 +628,33 @@ class spell_dru_savage_defense : public SpellScriptLoader
 public:
     spell_dru_savage_defense() : SpellScriptLoader("spell_dru_savage_defense") { }
 
-    class spell_dru_savage_defense_AuraScript : public AuraScript
+    class spell_dru_savage_defense_SpellScript : public SpellScript
     {
-        PrepareAuraScript(spell_dru_savage_defense_AuraScript);
+        PrepareSpellScript(spell_dru_savage_defense_SpellScript);
 
-        uint32 absorbPct;
-
-        bool Load() override
+        bool Validate(SpellInfo const* /*spellInfo*/) override
         {
-            absorbPct = GetSpellInfo()->Effects[EFFECT_0].CalcValue(GetCaster());
+            if (!sSpellMgr->GetSpellInfo(132402)) // Savage Defense aura
+                return false;
             return true;
         }
 
-        void CalculateAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+        void HandleCast()
         {
-            // Set absorbtion amount to unlimited
-            amount = -1;
-        }
-
-        void Absorb(AuraEffect* aurEff, DamageInfo& /*dmgInfo*/, uint32& absorbAmount)
-        {
-            absorbAmount = uint32(CalculatePct(GetTarget()->GetTotalAttackPowerValue(WeaponAttackType::BASE_ATTACK), absorbPct));
-            aurEff->SetAmount(0);
+            // Trigger the dodge aura spell
+            if (Unit* caster = GetCaster())
+                caster->CastSpell(caster, 132402, true);
         }
 
         void Register() override
         {
-            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_dru_savage_defense_AuraScript::CalculateAmount, EFFECT_0, SPELL_AURA_SCHOOL_ABSORB);
-            OnEffectAbsorb += AuraEffectAbsorbFn(spell_dru_savage_defense_AuraScript::Absorb, EFFECT_0);
+            AfterCast += SpellCastFn(spell_dru_savage_defense_SpellScript::HandleCast);
         }
     };
 
-    AuraScript* GetAuraScript() const override
+    SpellScript* GetSpellScript() const override
     {
-        return new spell_dru_savage_defense_AuraScript();
+        return new spell_dru_savage_defense_SpellScript();
     }
 };
 
