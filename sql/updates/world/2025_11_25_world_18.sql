@@ -37,3 +37,9 @@ DELETE FROM `conditions` WHERE `SourceTypeOrReferenceId` = 13 AND `SourceEntry` 
 -- Remove creature_loot_template conditions (SourceType 17) that reference spell 40200
 DELETE FROM `conditions` WHERE `SourceTypeOrReferenceId` = 17 AND `SourceEntry` = 40200;
 
+-- 4. Remove condition entry with SourceGroup 69 for creature_loot_template
+-- SourceType 17 = CONDITION_SOURCE_TYPE_CREATURE_LOOT_TEMPLATE
+-- SourceGroup 69 references creature_loot_template entry 69, but validation fails
+-- This entry may not exist in the database, but adding DELETE to be safe (idempotent)
+DELETE FROM `conditions` WHERE `SourceTypeOrReferenceId` = 17 AND `SourceGroup` = 69;
+
