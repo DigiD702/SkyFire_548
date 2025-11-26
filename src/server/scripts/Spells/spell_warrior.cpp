@@ -679,13 +679,12 @@ public:
 
         void Register() OVERRIDE
         {
-            // MoP DBC only provides a single effect for Second Wind that alternates between
-            // periodic damage (spell 113344) and a dummy aura (spell 125667) depending on spec.
-            // Keep legacy registrations as fallbacks so the handler runs regardless of data layout.
+            // Spell 125667 (Second Wind) uses SPELL_AURA_DUMMY (4) which doesn't have periodic ticks.
+            // Health checking is handled by SecondWindHealEvent in spell_warr_second_wind_proc.
+            // Only hook SPELL_AURA_PERIODIC_DAMAGE for spell 113344 if it's actually used for Second Wind.
+            // Note: Spell 113344 is "Bloodbath" in DBC, so this hook may not be needed.
+            // Keeping it for compatibility in case spell structure changes.
             OnEffectPeriodic += AuraEffectPeriodicFn(spell_warr_second_wind_heal_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DAMAGE);
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_warr_second_wind_heal_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_DUMMY);
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_warr_second_wind_heal_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_DUMMY);
-            OnEffectPeriodic += AuraEffectPeriodicFn(spell_warr_second_wind_heal_AuraScript::HandlePeriodic, EFFECT_0, SPELL_AURA_PERIODIC_HEAL);
         }
     };
 
