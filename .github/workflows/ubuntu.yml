@@ -23,10 +23,12 @@ env:
   OPENSSL_ROOT_DIR: ${{ github.workspace }}/.deps/openssl-4.0.0
   BUILD_DIR: ${{ github.workspace }}/build/ubuntu
   CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CC: gcc-14
+  CXX: g++-14
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
 
     steps:
@@ -51,6 +53,15 @@ jobs:
           zlib1g-dev
 
         sudo apt-get install -y default-libmysqlclient-dev || sudo apt-get install -y libmysqlclient-dev
+
+    - name: Verify compiler toolchain
+      shell: bash
+      run: |
+        set -euo pipefail
+        command -v "$CC"
+        command -v "$CXX"
+        "$CC" --version
+        "$CXX" --version
 
     - name: Cache Boost
       id: boost-cache
@@ -118,6 +129,8 @@ jobs:
         set -euo pipefail
         cmake -S "$GITHUB_WORKSPACE" -B "$BUILD_DIR" -G Ninja \
           -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+          -DCMAKE_C_COMPILER="$CC" \
+          -DCMAKE_CXX_COMPILER="$CXX" \
           -DCMAKE_C_COMPILER_LAUNCHER=ccache \
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -DTOOLS=ON \
