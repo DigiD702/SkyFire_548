@@ -23,6 +23,8 @@
 #include "WorldSocket.h"
 #include "WorldSocketAcceptor.h"
 #include <boost/asio/socket_base.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/system/error_code.hpp>
 
 /**
 * This is a helper class to WorldSocketMgr, that manages
@@ -33,9 +35,10 @@ class ReactorRunnable
 {
 public:
     ReactorRunnable() :
+        m_IoContext(),
+        m_Timer(m_IoContext),
         m_Connections(0),
-        m_Stopped(false),
-        m_Acceptor(NULL)
+        m_Stopped(false)
     {
     }
 
@@ -76,11 +79,6 @@ public:
     long Connections()
     {
         return m_Connections.load();
-    }
-
-    void SetAcceptor(WorldSocketAcceptor* acceptor)
-    {
-        m_Acceptor = acceptor;
     }
 
     int AddSocket(WorldSocket* sock)
@@ -130,12 +128,11 @@ protected:
 
         while (!m_Stopped)
         {
-            if (m_Acceptor)
-                m_Acceptor->Update();
-
             AddNewSockets();
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            boost::system::error_code ignored;
+            m_Timer.expires_after(std::chrono::milliseconds(10));
+            m_Timer.wait(ignored);
 
             for (i = m_Sockets.begin(); i != m_Sockets.end();)
             {
@@ -179,10 +176,11 @@ private:
     typedef std::atomic<long> AtomicInt;
     typedef std::set<WorldSocket*> SocketSet;
 
+    boost::asio::io_context m_IoContext;
+    boost::asio::steady_timer m_Timer;
     AtomicInt m_Connections;
     std::atomic<bool> m_Stopped;
     std::thread m_Thread;
-    WorldSocketAcceptor* m_Acceptor;
 
     SocketSet m_Sockets;
 
@@ -217,7 +215,7 @@ WorldSocketMgr::StartReactiveIO(uint16 port, const char* address)
         return -1;
     }
 
-    m_NetThreadsCount = static_cast<size_t> (num_threads + 1);
+    m_NetThreadsCount = static_cast<size_t> (num_threads);
 
     m_NetThreads = new ReactorRunnable[m_NetThreadsCount];
 
@@ -239,8 +237,6 @@ WorldSocketMgr::StartReactiveIO(uint16 port, const char* address)
         SF_LOG_ERROR("misc", "Failed to open acceptor, check if the port is free");
         return -1;
     }
-
-    m_NetThreads[0].SetAcceptor(m_Acceptor);
 
     for (size_t i = 0; i < m_NetThreadsCount; ++i)
         m_NetThreads[i].Start();
@@ -317,8 +313,7 @@ WorldSocketMgr::OnSocketOpen(WorldSocket* sock)
 
     sock->m_OutBufferSize = static_cast<size_t> (m_SockOutUBuff);
 
-    // we skip the Acceptor Thread
-    size_t min = 1;
+    size_t min = 0;
 
     ASSERT(m_NetThreadsCount >= 1);
 

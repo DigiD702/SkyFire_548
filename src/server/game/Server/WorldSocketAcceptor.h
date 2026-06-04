@@ -15,6 +15,9 @@
 #include "WorldSocket.h"
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <atomic>
+#include <memory>
+#include <thread>
 
 class WorldSocketAcceptor
 {
@@ -27,8 +30,13 @@ public:
     void Update();
 
 private:
+    void AsyncAccept();
+    void HandleAccept(std::shared_ptr<WorldSocketHandle> clientSocket, boost::system::error_code const& error);
+
     boost::asio::io_context m_IoContext;
     boost::asio::ip::tcp::acceptor m_Acceptor;
+    std::thread m_Thread;
+    std::atomic<bool> m_Closed;
 };
 
 #endif /* __WORLDSOCKETACCEPTOR_H_ */
