@@ -13,6 +13,7 @@ file(GLOB_RECURSE sources_Database Database/*.cpp Database/*.h)
 file(GLOB_RECURSE sources_DataStores DataStores/*.cpp DataStores/*.h)
 file(GLOB_RECURSE sources_Dynamic Dynamic/*.cpp Dynamic/*.h)
 file(GLOB_RECURSE sources_Logging Logging/*.cpp Logging/*.h)
+file(GLOB_RECURSE sources_Network Network/*.cpp Network/*.h)
 file(GLOB_RECURSE sources_Packets Packets/*.cpp Packets/*.h)
 file(GLOB_RECURSE sources_Platform Platform/*.cpp Platform/*.h)
 file(GLOB_RECURSE sources_Threading Threading/*.cpp Threading/*.h)
@@ -26,6 +27,7 @@ source_group(Database FILES ${sources_Database})
 source_group(DataStores FILES ${sources_DataStores})
 source_group(Dynamic FILES ${sources_Dynamic})
 source_group(Logging FILES ${sources_Logging})
+source_group(Network FILES ${sources_Network})
 source_group(Packets FILES ${sources_Packets})
 source_group(Platform FILES ${sources_Platform})
 source_group(Threading FILES ${sources_Threading})
@@ -55,6 +57,7 @@ set(shared_STAT_SRCS
   ${sources_Debugging}
   ${sources_Dynamic}
   ${sources_Logging}
+  ${sources_Network}
   ${sources_Packets}
   ${sources_Platform}
   ${sources_Threading}
@@ -77,6 +80,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/Debugging
   ${CMAKE_CURRENT_SOURCE_DIR}/Dynamic
   ${CMAKE_CURRENT_SOURCE_DIR}/Logging
+  ${CMAKE_CURRENT_SOURCE_DIR}/Network
   ${CMAKE_CURRENT_SOURCE_DIR}/Packets
   ${CMAKE_CURRENT_SOURCE_DIR}/Platform
   ${CMAKE_CURRENT_SOURCE_DIR}/Threading
