@@ -1,0 +1,164 @@
+name: ubuntu-pch-smoke
+
+on:
+  push:
+    branches: [ main, trunk, movement ]
+    paths-ignore:
+      - 'sql/**'
+  pull_request:
+    branches: [ main, trunk, movement ]
+    paths-ignore:
+      - 'sql/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILD_TYPE: RelWithDebInfo
+  BOOST_VERSION: 1.91.0
+  OPENSSL_VERSION: 4.0.0
+  DEPS_DIR: ${{ github.workspace }}/.deps
+  BOOST_ROOT: ${{ github.workspace }}/.deps/boost_1_91_0
+  OPENSSL_ROOT_DIR: ${{ github.workspace }}/.deps/openssl-4.0.0
+  BUILD_DIR: ${{ github.workspace }}/build/ubuntu-pch
+  CCACHE_DIR: ${{ github.workspace }}/.ccache-pch
+  CC: gcc-14
+  CXX: g++-14
+
+jobs:
+  pch-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Ubuntu dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          ca-certificates \
+          ccache \
+          cmake \
+          git \
+          libbz2-dev \
+          libreadline-dev \
+          ninja-build \
+          perl \
+          pkg-config \
+          wget \
+          zlib1g-dev
+
+        sudo apt-get install -y default-libmysqlclient-dev || sudo apt-get install -y libmysqlclient-dev
+
+    - name: Verify compiler toolchain
+      shell: bash
+      run: |
+        set -euo pipefail
+        command -v "$CC"
+        command -v "$CXX"
+        "$CC" --version
+        "$CXX" --version
+
+    - name: Cache Boost
+      id: boost-cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.BOOST_ROOT }}
+        key: ubuntu-boost-${{ env.BOOST_VERSION }}
+
+    - name: Install Boost
+      if: steps.boost-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$DEPS_DIR"
+        boost_archive="$RUNNER_TEMP/boost_1_91_0.tar.gz"
+        wget -q "https://archives.boost.io/release/$BOOST_VERSION/source/boost_1_91_0.tar.gz" -O "$boost_archive"
+        tar -xzf "$boost_archive" -C "$RUNNER_TEMP"
+        cd "$RUNNER_TEMP/boost_1_91_0"
+        ./bootstrap.sh
+        ./b2 install --prefix="$BOOST_ROOT" --with-headers -j"$(nproc)"
+
+    - name: Cache OpenSSL
+      id: openssl-cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.OPENSSL_ROOT_DIR }}
+        key: ubuntu-openssl-${{ env.OPENSSL_VERSION }}
+
+    - name: Install OpenSSL
+      if: steps.openssl-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$DEPS_DIR"
+        openssl_archive="$RUNNER_TEMP/openssl-$OPENSSL_VERSION.tar.gz"
+        wget -q "https://www.openssl.org/source/openssl-$OPENSSL_VERSION.tar.gz" -O "$openssl_archive"
+        tar -xzf "$openssl_archive" -C "$RUNNER_TEMP"
+        cd "$RUNNER_TEMP/openssl-$OPENSSL_VERSION"
+        ./Configure linux-x86_64 \
+          --prefix="$OPENSSL_ROOT_DIR" \
+          --openssldir="$OPENSSL_ROOT_DIR/ssl" \
+          shared \
+          enable-legacy
+        make -j"$(nproc)"
+        make install_sw install_ssldirs
+
+    - name: Export dependency paths
+      shell: bash
+      run: |
+        echo "$OPENSSL_ROOT_DIR/bin" >> "$GITHUB_PATH"
+        echo "LD_LIBRARY_PATH=$OPENSSL_ROOT_DIR/lib64:$OPENSSL_ROOT_DIR/lib:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
+
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.CCACHE_DIR }}
+        key: ubuntu-pch-ccache-${{ github.ref_name }}-${{ github.sha }}
+        restore-keys: |
+          ubuntu-pch-ccache-${{ github.ref_name }}-
+          ubuntu-pch-ccache-
+
+    - name: Configure with PCH
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake -S "$GITHUB_WORKSPACE" -B "$BUILD_DIR" -G Ninja \
+          -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+          -DCMAKE_C_COMPILER="$CC" \
+          -DCMAKE_CXX_COMPILER="$CXX" \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DTOOLS=OFF \
+          -DBOOST_ROOT="$BOOST_ROOT" \
+          -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT_DIR"
+
+    - name: Build shared with PCH
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake --build "$BUILD_DIR" --target shared --parallel "$(nproc)"
+
+    - name: Build authserver with PCH
+      shell: bash
+      run: |
+        set -euo pipefail
+        cmake --build "$BUILD_DIR" --target authserver --parallel "$(nproc)"
+
+    - name: ccache stats
+      if: always()
+      shell: bash
+      run: ccache --show-stats || true
+
+    - name: Upload CMake diagnostics
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ubuntu-pch-cmake-diagnostics
+        path: |
+          ${{ env.BUILD_DIR }}/CMakeCache.txt
+          ${{ env.BUILD_DIR }}/CMakeFiles/CMake*.log
