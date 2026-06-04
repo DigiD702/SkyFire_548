@@ -2,7 +2,7 @@ name: windows-build
 
 on:
   push:
-    branches: [ main, trunk, movement ]
+    branches: [ main, trunk, movement, boost_conversion ]
     paths-ignore:
       - 'sql/**'
       
