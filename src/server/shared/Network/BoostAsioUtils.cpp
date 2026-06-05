@@ -59,8 +59,7 @@ namespace Net
 
             lastError = error;
 
-            boost::system::error_code ignored;
-            acceptor.close(ignored);
+            CloseTcpAcceptor(acceptor);
         }
 
         SF_LOG_ERROR(logFilter, "Failed to open %s listener on %s:%u, error %d",

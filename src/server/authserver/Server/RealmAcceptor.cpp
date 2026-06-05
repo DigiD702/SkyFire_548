@@ -49,8 +49,7 @@ void RealmAcceptor::Close()
     if (!_closed.compare_exchange_strong(expected, true))
         return;
 
-    boost::system::error_code ignored;
-    _acceptor.close(ignored);
+    Skyfire::Net::CloseTcpAcceptor(_acceptor);
     _ioContext.stop();
 
     if (_thread.joinable())

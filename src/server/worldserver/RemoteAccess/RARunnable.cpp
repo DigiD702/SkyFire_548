@@ -53,8 +53,7 @@ void RARunnable::Run()
 
     ioContext->run();
 
-    boost::system::error_code ignored;
-    acceptor->close(ignored);
+    Skyfire::Net::CloseTcpAcceptor(*acceptor);
 
     SF_LOG_DEBUG("server.worldserver", "Skyfire RA thread exiting");
 }
@@ -104,8 +103,7 @@ namespace
 
                 if (World::IsStopped())
                 {
-                    boost::system::error_code ignored;
-                    acceptor->close(ignored);
+                    Skyfire::Net::CloseTcpAcceptor(*acceptor);
                     ioContext->stop();
                     return;
                 }

@@ -51,8 +51,7 @@ void WorldSocketAcceptor::Close()
     if (!m_Closed.compare_exchange_strong(expected, true))
         return;
 
-    boost::system::error_code ignored;
-    m_Acceptor.close(ignored);
+    Skyfire::Net::CloseTcpAcceptor(m_Acceptor);
     m_IoContext.stop();
 
     if (m_Thread.joinable())

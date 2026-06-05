@@ -94,3 +94,23 @@ elseif(TARGET Boost::boost)
 endif()
 
 add_test(NAME network_address_tests COMMAND network_address_tests)
+
+add_executable(boost_asio_utils_tests
+  BoostAsioUtilsTests.cpp
+)
+
+target_include_directories(boost_asio_utils_tests PRIVATE
+  ${CMAKE_BINARY_DIR}
+  ${CMAKE_SOURCE_DIR}/src/server/shared
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Network
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Platform
+  ${Boost_INCLUDE_DIRS}
+)
+
+if(TARGET Boost::headers)
+  target_link_libraries(boost_asio_utils_tests Boost::headers)
+elseif(TARGET Boost::boost)
+  target_link_libraries(boost_asio_utils_tests Boost::boost)
+endif()
+
+add_test(NAME boost_asio_utils_tests COMMAND boost_asio_utils_tests)
