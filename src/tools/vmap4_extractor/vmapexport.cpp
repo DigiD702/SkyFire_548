@@ -5,6 +5,7 @@
 
 #define _CRT_SECURE_NO_DEPRECATE
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <vector>
 #include <list>
@@ -30,6 +31,12 @@
 
 //#pragma warning(disable : 4505)
 //#pragma comment(lib, "Winmm.lib")
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-overflow"
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+#endif
 
 #include <map>
 
@@ -119,7 +126,7 @@ bool LoadLocaleMPQFile(int locale)
 {
     TCHAR buff[1024];
     memset(buff, 0, sizeof(buff));
-    _stprintf(buff, _T("%s%s/locale-%s.MPQ"), input_path, LocalesT[locale], LocalesT[locale]);
+    snprintf(buff, sizeof(buff), "%s%s/locale-%s.MPQ", input_path, LocalesT[locale], LocalesT[locale]);
     if (!SFileOpenArchive(buff, 0, MPQ_OPEN_READ_ONLY, &LocaleMpq))
     {
         if (GetLastError() != ERROR_PATH_NOT_FOUND)
@@ -143,12 +150,12 @@ bool LoadLocaleMPQFile(int locale)
         if (Builds[i] > LAST_DBC_IN_DATA_BUILD)
         {
             prefix = "";
-            _stprintf(buff, _T("%s%s/wow-update-%s-%u.MPQ"), input_path, LocalesT[locale], LocalesT[locale], Builds[i]);
+            snprintf(buff, sizeof(buff), "%s%s/wow-update-%s-%u.MPQ", input_path, LocalesT[locale], LocalesT[locale], Builds[i]);
         }
         else
         {
             prefix = Locales[locale];
-            _stprintf(buff, _T("%swow-update-base-%u.MPQ"), input_path, Builds[i]);
+            snprintf(buff, sizeof(buff), "%swow-update-base-%u.MPQ", input_path, Builds[i]);
         }
 
         if (!SFileOpenPatchArchive(LocaleMpq, buff, prefix, 0))
@@ -166,7 +173,7 @@ bool LoadLocaleMPQFile(int locale)
 void LoadCommonMPQFiles(uint32 build)
 {
     TCHAR filename[1024];
-    _stprintf(filename, _T("%sworld.MPQ"), input_path);
+    snprintf(filename, sizeof(filename), "%sworld.MPQ", input_path);
     _tprintf(_T("Loading common MPQ files\n"));
     if (!SFileOpenArchive(filename, 0, MPQ_OPEN_READ_ONLY, &WorldMpq))
     {
@@ -181,7 +188,7 @@ void LoadCommonMPQFiles(uint32 build)
         if (build < 15211 && !strcmp("world2.MPQ", CONF_mpq_list[i]))   // 4.3.2 and higher MPQ
             continue;
 
-        _stprintf(filename, _T("%s%s"), input_path, CONF_mpq_list[i]);
+        snprintf(filename, sizeof(filename), "%s%s", input_path, CONF_mpq_list[i]);
         if (!SFileOpenPatchArchive(WorldMpq, filename, "", 0))
         {
             if (GetLastError() != ERROR_PATH_NOT_FOUND)
@@ -205,12 +212,12 @@ void LoadCommonMPQFiles(uint32 build)
         if (Builds[i] > LAST_DBC_IN_DATA_BUILD)
         {
             prefix = "";
-            _stprintf(filename, _T("%swow-update-base-%u.MPQ"), input_path, Builds[i]);
+            snprintf(filename, sizeof(filename), "%swow-update-base-%u.MPQ", input_path, Builds[i]);
         }
         else
         {
             prefix = "base";
-            _stprintf(filename, _T("%swow-update-%u.MPQ"), input_path, Builds[i]);
+            snprintf(filename, sizeof(filename), "%swow-update-%u.MPQ", input_path, Builds[i]);
         }
 
         if (!SFileOpenPatchArchive(WorldMpq, filename, prefix, 0))
@@ -342,7 +349,7 @@ bool ExtractSingleWmo(std::string& fname)
     if (rchr != NULL)
     {
         char cpy[4];
-        strncpy((char*)cpy, rchr, 4);
+        memcpy(cpy, rchr, sizeof(cpy));
         for (int i = 0; i < 4; ++i)
         {
             int m = cpy[i];
@@ -375,11 +382,12 @@ bool ExtractSingleWmo(std::string& fname)
     {
         for (uint32 i = 0; i < froot.nGroups; ++i)
         {
-            char temp[1024];
-            strncpy(temp, fname.c_str(), 1024);
-            temp[fname.length()-4] = 0;
+            size_t baseLen = strlen(plain_name);
+            if (baseLen > 4)
+                baseLen -= 4;
+
             char groupFileName[1024];
-            snprintf(groupFileName, sizeof(groupFileName), "%s_%03u.wmo", temp, i);
+            snprintf(groupFileName, sizeof(groupFileName), "%.*s_%03u.wmo", static_cast<int>(baseLen), plain_name, i);
             //printf("Trying to open groupfile %s\n",groupFileName);
 
             std::string s = groupFileName;
@@ -468,6 +476,11 @@ bool processArgv(int argc, char ** argv, const char *versionString)
 
                 if (input_path[strlen(input_path) - 1] != '\\' && input_path[strlen(input_path) - 1] != '/')
                     strcat(input_path, "/");
+
+                // Leave room for MPQ filename suffixes appended to input_path.
+                if (strlen(input_path) > sizeof(input_path) - 128)
+                    input_path[sizeof(input_path) - 128] = '\0';
+
                 ++i;
             }
             else
@@ -641,5 +654,10 @@ int main(int argc, char ** argv)
 
     printf("Extract %s. Work complete. No errors.\n",versionString);
     delete [] LiqType;
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
     return 0;
 }

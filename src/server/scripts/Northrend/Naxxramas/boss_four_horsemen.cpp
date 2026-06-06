@@ -110,7 +110,7 @@ public:
                 DoEncounteraction(NULL, false, true, false);
 
             if (instance)
-                instance->SetData(DATA_HORSEMEN0 + id, NOT_STARTED);
+                instance->SetData(static_cast<uint32>(DATA_HORSEMEN0) + static_cast<uint32>(id), NOT_STARTED);
 
             me->SetReactState(REACT_AGGRESSIVE);
             uiEventStarterGUID = 0;
@@ -290,7 +290,7 @@ public:
             summons.DespawnAll();
 
             if (instance)
-                instance->SetData(DATA_HORSEMEN0 + id, DONE);
+                instance->SetData(static_cast<uint32>(DATA_HORSEMEN0) + static_cast<uint32>(id), DONE);
 
             if (instance && DoEncounteraction(NULL, false, false, true))
             {

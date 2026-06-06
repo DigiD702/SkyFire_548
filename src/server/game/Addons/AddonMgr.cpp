@@ -7,8 +7,8 @@
 #include "DatabaseEnv.h"
 #include "DBCStores.h"
 #include "Log.h"
+#include "MD5.h"
 #include "Timer.h"
-#include <openssl/md5.h>
 
 namespace AddonMgr
 {
@@ -69,8 +69,13 @@ namespace AddonMgr
                 std::string name = fields[1].GetString();
                 std::string version = fields[2].GetString();
 
-                MD5(reinterpret_cast<uint8 const*>(name.c_str()), name.length(), addon.NameMD5);
-                MD5(reinterpret_cast<uint8 const*>(version.c_str()), version.length(), addon.VersionMD5);
+                MD5Hash nameHash;
+                nameHash.UpdateData(name);
+                nameHash.Finalize(addon.NameMD5, 16);
+
+                MD5Hash versionHash;
+                versionHash.UpdateData(version);
+                versionHash.Finalize(addon.VersionMD5, 16);
 
                 m_bannedAddons.push_back(addon);
 

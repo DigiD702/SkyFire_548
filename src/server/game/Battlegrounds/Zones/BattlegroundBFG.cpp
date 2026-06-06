@@ -354,7 +354,7 @@ void BattlegroundBFG::_NodeOccupied(uint8 node, Team team)
 
     uint8 capturedNodes = 0;
     for (uint8 i = 0; i < GILNEAS_BG_DYNAMIC_NODES_COUNT; ++i)
-        if (m_Nodes[i] == GetTeamIndexByTeamId(team) + GILNEAS_BG_NODE_TYPE_OCCUPIED && !m_NodeTimers[i])
+        if (m_Nodes[i] == static_cast<uint8>(GetTeamIndexByTeamId(team)) + static_cast<uint8>(GILNEAS_BG_NODE_TYPE_OCCUPIED) && !m_NodeTimers[i])
             ++capturedNodes;
 
     Creature* trigger = BgCreatures[node + 5] ? GetBGCreature(node + 5) : NULL; // 0-5 spirit guides
@@ -441,7 +441,7 @@ void BattlegroundBFG::EventPlayerClickedOnFlag(Player* source, GameObject* /*tar
         if (m_prevNodes[node] < GILNEAS_BG_NODE_TYPE_OCCUPIED) {
             UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
             m_prevNodes[node] = m_Nodes[node];
-            m_Nodes[node] = teamIndex + GILNEAS_BG_NODE_TYPE_CONTESTED;
+            m_Nodes[node] = static_cast<uint8>(teamIndex) + static_cast<uint8>(GILNEAS_BG_NODE_TYPE_CONTESTED);
             // burn current contested banner
             _DelBanner(node, GILNEAS_BG_NODE_TYPE_CONTESTED, !teamIndex);
             // create new contested banner
@@ -460,7 +460,7 @@ void BattlegroundBFG::EventPlayerClickedOnFlag(Player* source, GameObject* /*tar
         {
             UpdatePlayerScore(source, SCORE_BASES_DEFENDED, 1);
             m_prevNodes[node] = m_Nodes[node];
-            m_Nodes[node] = teamIndex + GILNEAS_BG_NODE_TYPE_OCCUPIED;
+            m_Nodes[node] = static_cast<uint8>(teamIndex) + static_cast<uint8>(GILNEAS_BG_NODE_TYPE_OCCUPIED);
             // burn current contested banner
             _DelBanner(node, GILNEAS_BG_NODE_TYPE_CONTESTED, !teamIndex);
             // create new occupied banner
@@ -482,7 +482,7 @@ void BattlegroundBFG::EventPlayerClickedOnFlag(Player* source, GameObject* /*tar
     {
         UpdatePlayerScore(source, SCORE_BASES_ASSAULTED, 1);
         m_prevNodes[node] = m_Nodes[node];
-        m_Nodes[node] = teamIndex + GILNEAS_BG_NODE_TYPE_CONTESTED;
+        m_Nodes[node] = static_cast<uint8>(teamIndex) + static_cast<uint8>(GILNEAS_BG_NODE_TYPE_CONTESTED);
         // burn current occupied banner
         _DelBanner(node, GILNEAS_BG_NODE_TYPE_OCCUPIED, !teamIndex);
         // create new contested banner

@@ -18,7 +18,7 @@
 BattlegroundAV::BattlegroundAV() : m_Mine_Timer(0), m_MaxLevel(0)
 {
     BgObjects.resize(BG_AV_OBJECT_MAX);
-    BgCreatures.resize(AV_CPLACE_MAX + AV_STATICCPLACE_MAX);
+    BgCreatures.resize(static_cast<uint32>(AV_CPLACE_MAX) + static_cast<uint32>(AV_STATICCPLACE_MAX));
 
     StartMessageIds[BG_STARTING_EVENT_FIRST] = LANG_BG_AV_START_TWO_MINUTES;
     StartMessageIds[BG_STARTING_EVENT_SECOND] = LANG_BG_AV_START_ONE_MINUTE;
@@ -250,7 +250,7 @@ Creature* BattlegroundAV::AddAVCreature(uint16 cinfoid, uint16 type)
     uint8 level;
     bool isStatic = false;
     Creature* creature = NULL;
-    ASSERT(type <= AV_CPLACE_MAX + AV_STATICCPLACE_MAX);
+    ASSERT(type <= static_cast<uint16>(AV_CPLACE_MAX) + static_cast<uint16>(AV_STATICCPLACE_MAX));
     if (type >= AV_CPLACE_MAX) //static
     {
         type -= AV_CPLACE_MAX;
@@ -598,8 +598,8 @@ void BattlegroundAV::EventPlayerDestroyedPoint(BG_AV_Nodes node)
         RewardReputationToTeam(owner == ALLIANCE ? 730 : 729, BG_AV_REP_TOWER, owner);
         RewardHonorToTeam(GetBonusHonor(BG_AV_KILL_TOWER), owner);
 
-        SpawnBGObject(BG_AV_OBJECT_TAURA_A_DUNBALDAR_SOUTH + GetTeamIndexByTeamId(owner) + (2 * tmp), RESPAWN_ONE_DAY);
-        SpawnBGObject(BG_AV_OBJECT_TFLAG_A_DUNBALDAR_SOUTH + GetTeamIndexByTeamId(owner) + (2 * tmp), RESPAWN_ONE_DAY);
+        SpawnBGObject(BG_AV_OBJECT_TAURA_A_DUNBALDAR_SOUTH + static_cast<uint8>(GetTeamIndexByTeamId(owner)) + (2 * tmp), RESPAWN_ONE_DAY);
+        SpawnBGObject(BG_AV_OBJECT_TFLAG_A_DUNBALDAR_SOUTH + static_cast<uint8>(GetTeamIndexByTeamId(owner)) + (2 * tmp), RESPAWN_ONE_DAY);
     }
     else
     {
@@ -608,7 +608,7 @@ void BattlegroundAV::EventPlayerDestroyedPoint(BG_AV_Nodes node)
         else
             SpawnBGObject(object + 11, RESPAWN_IMMEDIATELY);
         SpawnBGObject(BG_AV_OBJECT_AURA_N_FIRSTAID_STATION + 3 * node, RESPAWN_ONE_DAY);
-        SpawnBGObject(BG_AV_OBJECT_AURA_A_FIRSTAID_STATION + GetTeamIndexByTeamId(owner) + 3 * node, RESPAWN_IMMEDIATELY);
+        SpawnBGObject(BG_AV_OBJECT_AURA_A_FIRSTAID_STATION + static_cast<uint8>(GetTeamIndexByTeamId(owner)) + 3 * node, RESPAWN_IMMEDIATELY);
         PopulateNode(node);
         if (node == BG_AV_NODES_SNOWFALL_GRAVE) //snowfall eyecandy
         {
@@ -923,7 +923,7 @@ void BattlegroundAV::EventPlayerDefendsPoint(Player* player, uint32 object)
     if (!IsTower(node))
     {
         SpawnBGObject(BG_AV_OBJECT_AURA_N_FIRSTAID_STATION + 3 * node, RESPAWN_ONE_DAY);
-        SpawnBGObject(BG_AV_OBJECT_AURA_A_FIRSTAID_STATION + GetTeamIndexByTeamId(team) + 3 * node, RESPAWN_IMMEDIATELY);
+        SpawnBGObject(BG_AV_OBJECT_AURA_A_FIRSTAID_STATION + static_cast<uint8>(GetTeamIndexByTeamId(team)) + 3 * node, RESPAWN_IMMEDIATELY);
     }
     // despawn old go
     SpawnBGObject(object, RESPAWN_ONE_DAY);
@@ -1035,7 +1035,7 @@ void BattlegroundAV::EventPlayerAssaultsPoint(Player* player, uint32 object)
         {
             //spawning/despawning of aura
             SpawnBGObject(BG_AV_OBJECT_AURA_N_FIRSTAID_STATION + 3 * node, RESPAWN_IMMEDIATELY); //neutral aura spawn
-            SpawnBGObject(BG_AV_OBJECT_AURA_A_FIRSTAID_STATION + GetTeamIndexByTeamId(owner) + 3 * node, RESPAWN_ONE_DAY); //teeamaura despawn
+            SpawnBGObject(BG_AV_OBJECT_AURA_A_FIRSTAID_STATION + static_cast<uint8>(GetTeamIndexByTeamId(owner)) + 3 * node, RESPAWN_ONE_DAY); //teeamaura despawn
 
             RelocateDeadPlayers(BgCreatures[node]);
         }
@@ -1609,7 +1609,7 @@ void BattlegroundAV::ResetBGSubclass()
     InitNode(BG_AV_NODES_SNOWFALL_GRAVE, AV_NEUTRAL_TEAM, false); //give snowfall neutral owner
 
     m_Mine_Timer = AV_MINE_TICK_TIMER;
-    for (uint16 i = 0; i < AV_CPLACE_MAX + AV_STATICCPLACE_MAX; i++)
+    for (uint16 i = 0; i < static_cast<uint16>(AV_CPLACE_MAX) + static_cast<uint16>(AV_STATICCPLACE_MAX); i++)
         if (BgCreatures[i])
             DelCreature(i);
 }

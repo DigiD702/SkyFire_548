@@ -9054,7 +9054,7 @@ bool Unit::isSpellCrit(Unit* victim, SpellInfo const* spellProto, SpellSchoolMas
                 crit_chance = 0.0f;
             // For other schools
             else if (GetTypeId() == TypeID::TYPEID_PLAYER)
-                crit_chance = GetFloatValue(PLAYER_FIELD_SPELL_CRIT_PERCENTAGE + GetFirstSchoolInMask(schoolMask));
+                crit_chance = GetFloatValue(static_cast<uint16>(PLAYER_FIELD_SPELL_CRIT_PERCENTAGE) + static_cast<uint16>(GetFirstSchoolInMask(schoolMask)));
             else
                 crit_chance = (float)m_baseSpellCritChance;
 

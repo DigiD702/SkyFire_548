@@ -18,7 +18,8 @@ void CreateDir(std::string const& path)
 {
     if (chdir(path.c_str()) == 0)
     {
-        chdir("../");
+        if (chdir("../") != 0)
+            return;
         return;
     }
 

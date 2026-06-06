@@ -107,7 +107,7 @@ int Master::Run()
 {
     BigNumber seed1;
     seed1.SetRand(16 * 8);
-    SF_LOG_INFO("server.worldserver", "worldserver-daemon. revision: % s", SKYFIRE_VER_PRODUCTVERSION_STR);
+    SF_LOG_INFO("server.worldserver", "worldserver-daemon. revision: %s", SKYFIRE_VER_PRODUCTVERSION_STR);
     SF_LOG_INFO("server.worldserver", "<Ctrl-C> to stop.\n");
 
     SF_LOG_INFO("server.worldserver", "   ______  __  __  __  __  ______ __  ______  ______ ");
@@ -299,7 +299,7 @@ int Master::Run()
         LoginDatabase.DirectPExecute("UPDATE realmlist SET flag = flag & ~%u, population = 0 WHERE id = '%u'", REALM_FLAG_INVALID, itr->first);
     }
 
-    SF_LOG_INFO("server.worldserver",  " % s (worldserver-daemon) ready...", SKYFIRE_VER_PRODUCTVERSION_STR);
+    SF_LOG_INFO("server.worldserver", "%s (worldserver-daemon) ready...", SKYFIRE_VER_PRODUCTVERSION_STR);
 
     // when the main thread closes the singletons get unloaded
     // since worldrunnable uses them, it will crash if unloaded after master
@@ -453,7 +453,7 @@ bool Master::_StartDB()
         ///- Initialize the Character database
         if (!CharacterDatabase.Open(dbString, asyncThreads, synchThreads))
         {
-            SF_LOG_ERROR("server.worldserver", "Cannot connect to Character database%s, %s", dbString.c_str());
+            SF_LOG_ERROR("server.worldserver", "Cannot connect to Character database %s", dbString.c_str());
             return false;
         }
     }
@@ -462,7 +462,7 @@ bool Master::_StartDB()
         ///- Initialize the Character database
         if (!CharacterDatabase.Open(_dbHost, _dbPort, _dbUser, _dbPassword, _charactersDB, asyncThreads, synchThreads))
         {
-            SF_LOG_ERROR("server.worldserver", "Cannot connect to Character database%s, %s, %s, %s, %s", _dbHost, _dbPort, _dbUser, _dbPassword, _charactersDB);
+            SF_LOG_ERROR("server.worldserver", "Cannot connect to Character database %s, %s, %s, %s, %s", _dbHost, _dbPort, _dbUser, _dbPassword, _charactersDB);
             return false;
         }
     }
@@ -501,7 +501,7 @@ bool Master::_StartDB()
     {
         if (!LoginDatabase.Open(_dbHost, _dbPort, _dbUser, _dbPassword, _authDB, asyncThreads, synchThreads))
         {
-            SF_LOG_ERROR("server.worldserver", "Cannot connect to database%s %s, %s, %s, %s", _dbHost, _dbPort, _dbUser, _dbPassword, _authDB);
+            SF_LOG_ERROR("server.worldserver", "Cannot connect to database %s %s, %s, %s, %s", _dbHost, _dbPort, _dbUser, _dbPassword, _authDB);
             return false;
         }
     }
