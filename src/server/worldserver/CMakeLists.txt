@@ -213,8 +213,8 @@ if( UNIX )
   install(FILES worldserver.conf.dist DESTINATION ${CONF_DIR})
   install(FILES worldserverd.service.dist DESTINATION ${CONF_DIR})
 elseif( WIN32 )
-  install(TARGETS worldserver DESTINATION "${CMAKE_INSTALL_PREFIX}")
-  install(FILES worldserver.conf.dist DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  install(TARGETS worldserver RUNTIME DESTINATION ".")
+  install(FILES worldserver.conf.dist DESTINATION ".")
 endif()
 
 # Generate precompiled header

@@ -25,5 +25,5 @@ target_link_libraries(vmap4assembler
 if( UNIX )
   install(TARGETS vmap4assembler DESTINATION bin)
 elseif( WIN32 )
-  install(TARGETS vmap4assembler DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  install(TARGETS vmap4assembler RUNTIME DESTINATION ".")
 endif()

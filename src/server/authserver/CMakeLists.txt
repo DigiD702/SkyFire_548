@@ -147,8 +147,8 @@ if( UNIX )
   install(FILES  authserver.conf.dist DESTINATION ${CONF_DIR})
   install(FILES  authserverd.service.dist DESTINATION ${CONF_DIR})
 elseif( WIN32 )
-  install(TARGETS authserver DESTINATION "${CMAKE_INSTALL_PREFIX}")
-  install(FILES authserver.conf.dist DESTINATION "${CMAKE_INSTALL_PREFIX}")
+  install(TARGETS authserver RUNTIME DESTINATION ".")
+  install(FILES authserver.conf.dist DESTINATION ".")
 endif()
 
 # Generate precompiled header
