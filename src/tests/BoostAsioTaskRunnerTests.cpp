@@ -90,5 +90,62 @@ int main()
 
     runner.Join();
 
+    Skyfire::Asio::IoContextTaskRunner firstService;
+    Skyfire::Asio::IoContextTaskRunner secondService;
+    int runningServices = 0;
+    bool stopServices = false;
+
+    passed &= Expect(firstService.Start([&lock, &changed, &runningServices, &stopServices]
+    {
+        {
+            std::lock_guard<std::mutex> guard(lock);
+            ++runningServices;
+        }
+
+        changed.notify_all();
+
+        std::unique_lock<std::mutex> waitLock(lock);
+        changed.wait(waitLock, [&stopServices]
+        {
+            return stopServices;
+        });
+    }) == 0, "First service runner rejected task");
+
+    passed &= Expect(secondService.Start([&lock, &changed, &runningServices, &stopServices]
+    {
+        {
+            std::lock_guard<std::mutex> guard(lock);
+            ++runningServices;
+        }
+
+        changed.notify_all();
+
+        std::unique_lock<std::mutex> waitLock(lock);
+        changed.wait(waitLock, [&stopServices]
+        {
+            return stopServices;
+        });
+    }) == 0, "Second service runner rejected task");
+
+    {
+        std::unique_lock<std::mutex> waitLock(lock);
+        passed &= Expect(changed.wait_for(waitLock, std::chrono::seconds(2), [&runningServices]
+        {
+            return runningServices == 2;
+        }), "Concurrent service runners did not both enter");
+    }
+
+    {
+        std::lock_guard<std::mutex> guard(lock);
+        stopServices = true;
+    }
+
+    changed.notify_all();
+    firstService.Join();
+    secondService.Join();
+
+    passed &= Expect(!firstService.IsRunning(), "First service runner still reported running after join");
+    passed &= Expect(!secondService.IsRunning(), "Second service runner still reported running after join");
+
     return passed ? 0 : 1;
 }

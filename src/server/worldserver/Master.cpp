@@ -26,12 +26,12 @@
 #include "RealmList.h"
 #include "SFSoap.h"
 #include "Timer.h"
+#include "Threading/BoostAsioTaskRunner.h"
 #include "Util.h"
 
 #include "BigNumber.h"
 #include <csignal>
 #include <memory>
-#include <thread>
 
 #ifdef _WIN32
 #include "ServiceWin32.h"
@@ -162,10 +162,26 @@ int Master::Run()
     std::signal(SIGBREAK, WorldServerSignalHandler);
 #endif
 
-    ///- Launch WorldRunnable thread
-    std::thread worldThread([] { WorldRunnable().Run(); });
+    ///- Launch WorldRunnable task
+    Skyfire::Asio::IoContextTaskRunner worldRunner;
+    if (worldRunner.Start([] { WorldRunnable().Run(); }) == -1)
+    {
+        SF_LOG_ERROR("server.worldserver", "Failed to start world task");
+        _StopDB();
+        return 1;
+    }
 
-    std::unique_ptr<std::thread> cliThread;
+    Skyfire::Asio::IoContextTaskRunner raRunner;
+    if (raRunner.Start([] { RARunnable().Run(); }) == -1)
+    {
+        SF_LOG_ERROR("server.worldserver", "Failed to start RA task");
+        World::StopNow(ERROR_EXIT_CODE);
+        worldRunner.Join();
+        _StopDB();
+        return 1;
+    }
+
+    std::unique_ptr<Skyfire::Asio::IoContextTaskRunner> cliRunner;
 
 #ifdef _WIN32
     if (sConfigMgr->GetBoolDefault("Console.Enable", true) && (m_ServiceStatus == -1)/* need disable console in service mode*/)
@@ -173,11 +189,14 @@ int Master::Run()
     if (sConfigMgr->GetBoolDefault("Console.Enable", true))
 #endif
     {
-        ///- Launch CliRunnable thread
-        cliThread.reset(new std::thread([] { CliRunnable().Run(); }));
+        ///- Launch CliRunnable task
+        cliRunner.reset(new Skyfire::Asio::IoContextTaskRunner);
+        if (cliRunner->Start([] { CliRunnable().Run(); }) == -1)
+        {
+            SF_LOG_ERROR("server.worldserver", "Failed to start CLI task");
+            cliRunner.reset();
+        }
     }
-
-    std::thread rarThread([] { RARunnable().Run(); });
 
 #if defined(_WIN32) || defined(__linux__)
     ///- Handle affinity for multiple processors and process priority
@@ -254,11 +273,13 @@ int Master::Run()
     }
 
     ///- Start up freeze catcher thread
+    Skyfire::Asio::IoContextTaskRunner freezeDetectorRunner;
     if (uint32 freezeDelay = sConfigMgr->GetIntDefault("MaxCoreStuckTime", 0))
     {
         FreezeDetectorRunnable fdr;
         fdr.SetDelayTime(freezeDelay * 1000);
-        std::thread([fdr]() mutable { fdr.Run(); }).detach();
+        if (freezeDetectorRunner.Start([fdr]() mutable { fdr.Run(); }) == -1)
+            SF_LOG_ERROR("server.worldserver", "Failed to start anti-freeze task");
     }
 
     ///- Launch the world listener socket
@@ -282,11 +303,11 @@ int Master::Run()
 
     // when the main thread closes the singletons get unloaded
     // since worldrunnable uses them, it will crash if unloaded after master
-    if (worldThread.joinable())
-        worldThread.join();
+    worldRunner.Join();
 
-    if (rarThread.joinable())
-        rarThread.join();
+    raRunner.Join();
+
+    freezeDetectorRunner.Join();
 
     soapService.Join();
 
@@ -303,7 +324,7 @@ int Master::Run()
 
     SF_LOG_INFO("server.worldserver", "Halting process...");
 
-    if (cliThread)
+    if (cliRunner)
     {
 #ifdef _WIN32
 
@@ -342,13 +363,11 @@ int Master::Run()
         DWORD numb;
         WriteConsoleInput(hStdIn, b, 4, &numb);
 
-        if (cliThread->joinable())
-            cliThread->join();
+        cliRunner->Join();
 
 #else
 
-        if (cliThread->joinable())
-            cliThread->join();
+        cliRunner->Join();
 
 #endif
     }
