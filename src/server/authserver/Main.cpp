@@ -202,7 +202,7 @@ extern int main(int argc, char** argv)
         return 1;
     }
 
-    SF_LOG_INFO("server.authserver", "authserver-daemon. revision: % s", VER_PRODUCTVERSION_STR);
+    SF_LOG_INFO("server.authserver", "authserver-daemon. revision: % s", SKYFIRE_VER_PRODUCTVERSION_STR);
     SF_LOG_INFO("server.authserver", "<Ctrl-C> to stop.\n");
 
     SF_LOG_INFO("server.authserver", "   ______  __  __  __  __  ______ __  ______  ______ ");
@@ -210,7 +210,7 @@ extern int main(int argc, char** argv)
     SF_LOG_INFO("server.authserver", "  \\ \\___  \\ \\  _'-\\ \\____ \\ \\  __\\ \\ \\ \\  __<\\ \\  __\\ ");
     SF_LOG_INFO("server.authserver", "   \\/\\_____\\ \\_\\ \\_\\/\\_____\\ \\_\\  \\ \\_\\ \\_\\ \\_\\ \\_____\\ ");
     SF_LOG_INFO("server.authserver", "    \\/_____/\\/_/\\/_/\\/_____/\\/_/   \\/_/\\/_/ /_/\\/_____/ ");
-    SF_LOG_INFO("server.authserver", "  %s Open-sourced Game Emulation", VER_LEGALCOPYRIGHT_STR);
+    SF_LOG_INFO("server.authserver", "  %s Open-sourced Game Emulation", SKYFIRE_VER_LEGALCOPYRIGHT_STR);
     SF_LOG_INFO("server.authserver", "           <http://www.projectskyfire.org/> \n");
 
     SF_LOG_INFO("server.authserver", "Using configuration file %s.", configFile);

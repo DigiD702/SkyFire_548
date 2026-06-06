@@ -99,7 +99,7 @@ public:
 
         handler->PSendSysMessage("Open Source Emulation https://www.projectskyfire.org");
         handler->PSendSysMessage("www.github.com/ProjectSkyfire/SkyFire_548");
-        handler->PSendSysMessage("revision: %s", VER_PRODUCTVERSION_STR);
+        handler->PSendSysMessage("revision: %s", SKYFIRE_VER_PRODUCTVERSION_STR);
         handler->PSendSysMessage(LANG_CONNECTED_PLAYERS, playersNum, maxPlayersNum);
         handler->PSendSysMessage(LANG_CONNECTED_USERS, activeClientsNum, maxActiveClientsNum, queuedClientsNum, maxQueuedClientsNum);
         handler->PSendSysMessage(LANG_UPTIME, uptime.c_str());

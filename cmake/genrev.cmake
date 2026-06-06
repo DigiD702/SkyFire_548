@@ -63,13 +63,13 @@ else()
   endif()
 endif()
 
-# Create the actual revision.h file from the above params
-if(NOT "${rev_hash_cached}" MATCHES "${rev_hash}" OR NOT "${rev_branch_cached}" MATCHES "${rev_branch}")
-  configure_file(
-    "${CMAKE_SOURCE_DIR}/revision.h.in.cmake"
-    "${BUILDDIR}/revision.h"
-    @ONLY
-  )
-  set(rev_hash_cached "${rev_hash}" CACHE INTERNAL "Cached commit-hash")
-  set(rev_branch_cached "${rev_branch}" CACHE INTERNAL "Cached branch name")
-endif()
+# Create the actual revision.h file from the above params.
+# configure_file only updates the output when content changes, but running it
+# every time keeps template-only edits from being hidden by cached git metadata.
+configure_file(
+  "${CMAKE_SOURCE_DIR}/revision.h.in.cmake"
+  "${BUILDDIR}/revision.h"
+  @ONLY
+)
+set(rev_hash_cached "${rev_hash}" CACHE INTERNAL "Cached commit-hash")
+set(rev_branch_cached "${rev_branch}" CACHE INTERNAL "Cached branch name")

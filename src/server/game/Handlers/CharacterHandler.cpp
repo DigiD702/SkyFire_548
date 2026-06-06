@@ -957,7 +957,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
         {
             chH.PSendSysMessage("Open Source Emulation https://www.projectskyfire.org");
             chH.PSendSysMessage("www.github.com/ProjectSkyfire/SkyFire_548");
-            chH.PSendSysMessage("revision: %s", VER_PRODUCTVERSION_STR);
+            chH.PSendSysMessage("revision: %s", SKYFIRE_VER_PRODUCTVERSION_STR);
         }
 
         SF_LOG_DEBUG("network", "WORLD: Sent server info");
