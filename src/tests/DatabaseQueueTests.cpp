@@ -4,6 +4,7 @@
 */
 
 #include "DatabaseQueue.h"
+#include "DatabaseWorker.h"
 #include "SQLOperation.h"
 
 #include <iostream>
@@ -39,7 +40,7 @@ namespace
     };
 }
 
-int main()
+bool TestQueueRunDrainsQueuedOperations()
 {
     Skyfire::DatabaseQueue queue;
 
@@ -61,14 +62,54 @@ int main()
     if (runResult != 0)
     {
         std::cerr << "DatabaseQueue::run returned " << runResult << '\n';
-        return 1;
+        return false;
     }
 
     if (completed != std::vector<int>{ 1, 2 })
     {
         std::cerr << "DatabaseQueue did not drain queued operations before closing\n";
-        return 1;
+        return false;
     }
+
+    return true;
+}
+
+bool TestDatabaseWorkerRunsQueueWithConnection()
+{
+    Skyfire::DatabaseQueue queue;
+
+    std::vector<int> completed;
+    std::mutex completedLock;
+    MySQLConnection* connection = reinterpret_cast<MySQLConnection*>(0x2);
+
+    DatabaseWorker worker(&queue, connection);
+
+    queue.enqueue(new RecordingOperation(completed, completedLock, 3, connection));
+    queue.enqueue(new RecordingOperation(completed, completedLock, 4, connection));
+    queue.close();
+
+    if (worker.wait() != 0)
+    {
+        std::cerr << "DatabaseWorker did not join cleanly\n";
+        return false;
+    }
+
+    if (completed != std::vector<int>{ 3, 4 })
+    {
+        std::cerr << "DatabaseWorker did not drain queued operations with its connection\n";
+        return false;
+    }
+
+    return true;
+}
+
+int main()
+{
+    if (!TestQueueRunDrainsQueuedOperations())
+        return 1;
+
+    if (!TestDatabaseWorkerRunsQueueWithConnection())
+        return 1;
 
     return 0;
 }

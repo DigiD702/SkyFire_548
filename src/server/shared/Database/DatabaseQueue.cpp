@@ -62,9 +62,9 @@ namespace Skyfire
         if (!connection)
             return -1;
 
-        CurrentDatabaseConnection = connection;
+        BindConnection(connection);
         _impl->executor.Run();
-        CurrentDatabaseConnection = nullptr;
+        ClearConnection();
         return 0;
     }
 
@@ -76,5 +76,20 @@ namespace Skyfire
 
         _impl->closed = true;
         _impl->executor.ResetWork();
+    }
+
+    Asio::IoContextExecutor& DatabaseQueue::GetExecutor()
+    {
+        return _impl->executor;
+    }
+
+    void DatabaseQueue::BindConnection(MySQLConnection* connection)
+    {
+        CurrentDatabaseConnection = connection;
+    }
+
+    void DatabaseQueue::ClearConnection()
+    {
+        CurrentDatabaseConnection = nullptr;
     }
 }

@@ -8,7 +8,7 @@
 
 #include "DatabaseQueue.h"
 #include "Define.h"
-#include <thread>
+#include "Threading/BoostAsioThread.h"
 
 class MySQLConnection;
 
@@ -24,7 +24,7 @@ public:
 private:
     Skyfire::DatabaseQueue* m_queue;
     MySQLConnection* m_conn;
-    std::thread m_thread;
+    Skyfire::Asio::IoContextThread m_thread;
     DatabaseWorker(DatabaseWorker const& right) = delete;
     DatabaseWorker& operator=(DatabaseWorker const& right) = delete;
 };

@@ -6,12 +6,12 @@
 #ifndef SF_BOOST_ASIO_THREAD_GROUP_H
 #define SF_BOOST_ASIO_THREAD_GROUP_H
 
-#include "Threading/BoostAsioExecutor.h"
+#include "Threading/BoostAsioThread.h"
 
 #include <atomic>
 #include <cstddef>
 #include <functional>
-#include <thread>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -52,7 +52,16 @@ namespace Asio
             try
             {
                 for (std::size_t i = 0; i < threadCount; ++i)
-                    _threads.push_back(std::thread(&IoContextThreadGroup::Run, this));
+                {
+                    std::unique_ptr<IoContextThread> thread(new IoContextThread);
+                    if (thread->Start(_executor, _preRun, _postRun) == -1)
+                    {
+                        StopAndJoin();
+                        return -1;
+                    }
+
+                    _threads.push_back(std::move(thread));
+                }
             }
             catch (...)
             {
@@ -76,9 +85,8 @@ namespace Asio
 
         void Join()
         {
-            for (std::thread& thread : _threads)
-                if (thread.joinable())
-                    thread.join();
+            for (std::unique_ptr<IoContextThread>& thread : _threads)
+                thread->Join();
 
             _threads.clear();
             _preRun = Hook();
@@ -99,19 +107,8 @@ namespace Asio
         }
 
     private:
-        void Run()
-        {
-            if (_preRun)
-                _preRun();
-
-            _executor.Run();
-
-            if (_postRun)
-                _postRun();
-        }
-
         IoContextExecutor _executor;
-        std::vector<std::thread> _threads;
+        std::vector<std::unique_ptr<IoContextThread> > _threads;
         Hook _preRun;
         Hook _postRun;
         std::atomic<bool> _running;

@@ -8,11 +8,17 @@
 
 #include <memory>
 
+class DatabaseWorker;
 class MySQLConnection;
 class SQLOperation;
 
 namespace Skyfire
 {
+    namespace Asio
+    {
+        class IoContextExecutor;
+    }
+
     class DatabaseQueue
     {
     public:
@@ -27,6 +33,12 @@ namespace Skyfire
         struct Impl;
 
         std::unique_ptr<Impl> _impl;
+
+        Asio::IoContextExecutor& GetExecutor();
+        void BindConnection(MySQLConnection* connection);
+        void ClearConnection();
+
+        friend class ::DatabaseWorker;
 
         DatabaseQueue(DatabaseQueue const& right) = delete;
         DatabaseQueue& operator=(DatabaseQueue const& right) = delete;

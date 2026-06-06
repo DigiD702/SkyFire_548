@@ -9,11 +9,25 @@
 #include "MySQLThreading.h"
 #include "SQLOperation.h"
 
+#include <stdexcept>
+
 DatabaseWorker::DatabaseWorker(Skyfire::DatabaseQueue* new_queue, MySQLConnection* con) :
     m_queue(new_queue),
     m_conn(con)
 {
-    m_thread = std::thread(&DatabaseWorker::svc, this);
+    if (!m_queue || !m_conn)
+        return;
+
+    if (m_thread.Start(m_queue->GetExecutor(),
+        [this]
+        {
+            m_queue->BindConnection(m_conn);
+        },
+        [this]
+        {
+            m_queue->ClearConnection();
+        }) == -1)
+        throw std::runtime_error("Failed to start database worker thread");
 }
 
 DatabaseWorker::~DatabaseWorker()
@@ -31,9 +45,5 @@ int DatabaseWorker::svc()
 
 int DatabaseWorker::wait()
 {
-    if (!m_thread.joinable())
-        return 0;
-
-    m_thread.join();
-    return 0;
+    return m_thread.Join();
 }
