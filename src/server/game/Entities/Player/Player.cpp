@@ -7009,11 +7009,7 @@ void Player::CheckAreaExploreAndOutdoor()
         if (areaEntry->m_ExplorationLevel > 0)
         {
             uint32 area = areaEntry->m_ID;
-            if (getLevel() >= sWorld->getIntConfig(WorldIntConfigs::CONFIG_MAX_PLAYER_LEVEL))
-            {
-                SendExplorationExperience(area, 0);
-            }
-            else
+            if (getLevel() < sWorld->getIntConfig(WorldIntConfigs::CONFIG_MAX_PLAYER_LEVEL))
             {
                 int32 diff = int32(getLevel()) - areaEntry->m_ExplorationLevel;
                 uint32 XP = 0;
