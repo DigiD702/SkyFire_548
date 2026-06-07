@@ -26576,6 +26576,12 @@ void Player::SetFallInformation(uint32 time, float z)
 
 void Player::HandleFall(MovementInfo const& movementInfo)
 {
+    if (GetCommandStatus(CHEAT_GOD))
+    {
+        RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_LANDING);
+        return;
+    }
+
     // calculate total z distance of the fall
     float z_diff = m_lastFallZ - movementInfo.pos.GetPositionZ();
     //SF_LOG_DEBUG("misc", "zDiff = %f", z_diff);
@@ -26586,9 +26592,6 @@ void Player::HandleFall(MovementInfo const& movementInfo)
         !HasAuraType(SPELL_AURA_HOVER) && !HasAuraType(SPELL_AURA_FEATHER_FALL) &&
         !HasAuraType(SPELL_AURA_FLY) && !IsImmunedToDamage(SPELL_SCHOOL_MASK_NORMAL))
     {
-        if (GetCommandStatus(CHEAT_GOD))
-            return;
-
         //Safe fall, fall height reduction
         int32 safe_fall = GetTotalAuraModifier(SPELL_AURA_SAFE_FALL);
 
