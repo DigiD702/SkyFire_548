@@ -80,7 +80,7 @@ public:
         if (!instance || instance->GetData(DATA_ZULAMAN_STATE) != NOT_STARTED)
             return false;
 
-        if (action != 0)
+        if (action != GOSSIP_OPTION_GOSSIP)
             return false;
 
         if (npc_voljin_zulamanAI* ai = CAST_AI(npc_voljin_zulamanAI, creature->GetAI()))
@@ -95,7 +95,7 @@ public:
 
     struct npc_voljin_zulamanAI : public ScriptedAI
     {
-        npc_voljin_zulamanAI(Creature* creature) : ScriptedAI(creature), _instance(creature->GetInstanceScript())
+        npc_voljin_zulamanAI(Creature* creature) : ScriptedAI(creature), _instance(creature->GetInstanceScript()), _gongCount(0)
         {
             if (_instance && _instance->GetData(DATA_ZULAMAN_STATE) == NOT_STARTED)
                 me->SetFlag(UNIT_FIELD_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);

@@ -1123,6 +1123,9 @@ bool Player::IsImmuneToEnvironmentalDamage()
 
 uint32 Player::EnvironmentalDamage(EnviromentalDamage type, uint32 damage)
 {
+    if (GetCommandStatus(CHEAT_GOD))
+        return 0;
+
     if (IsImmuneToEnvironmentalDamage())
         return 0;
 
