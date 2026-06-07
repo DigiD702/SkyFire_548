@@ -1123,6 +1123,9 @@ bool Player::IsImmuneToEnvironmentalDamage()
 
 uint32 Player::EnvironmentalDamage(EnviromentalDamage type, uint32 damage)
 {
+    if (GetCommandStatus(CHEAT_GOD))
+        return 0;
+
     if (IsImmuneToEnvironmentalDamage())
         return 0;
 
@@ -26576,6 +26579,12 @@ void Player::SetFallInformation(uint32 time, float z)
 
 void Player::HandleFall(MovementInfo const& movementInfo)
 {
+    if (GetCommandStatus(CHEAT_GOD))
+    {
+        RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_LANDING);
+        return;
+    }
+
     // calculate total z distance of the fall
     float z_diff = m_lastFallZ - movementInfo.pos.GetPositionZ();
     //SF_LOG_DEBUG("misc", "zDiff = %f", z_diff);

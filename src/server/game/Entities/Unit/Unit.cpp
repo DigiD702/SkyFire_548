@@ -605,16 +605,19 @@ uint32 Unit::DealDamage(Unit* victim, uint32 damage, CleanDamage const* cleanDam
     // Hook for OnDamage Event
     sScriptMgr->OnDamage(this, victim, damage);
 
-    if (victim->GetTypeId() == TypeID::TYPEID_PLAYER && this != victim)
+    if (victim->GetTypeId() == TypeID::TYPEID_PLAYER)
     {
-        // Signal to pets that their owner was attacked
-        Pet* pet = victim->ToPlayer()->GetPet();
-
-        if (pet && pet->IsAlive())
-            pet->AI()->OwnerAttackedBy(this);
-
         if (victim->ToPlayer()->GetCommandStatus(CHEAT_GOD))
             return 0;
+
+        if (this != victim)
+        {
+            // Signal to pets that their owner was attacked
+            Pet* pet = victim->ToPlayer()->GetPet();
+
+            if (pet && pet->IsAlive())
+                pet->AI()->OwnerAttackedBy(this);
+        }
     }
 
     // Signal the pet it was attacked so the AI can respond if needed
