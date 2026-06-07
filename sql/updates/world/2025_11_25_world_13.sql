@@ -3,12 +3,10 @@
 -- 
 -- Verified on Wowhead: All creatures show "React: A H" (hostile to both Alliance and Horde)
 -- This means they should use faction 14 (Monster - hostile to both factions)
--- Entry 42940 has no reaction info (trigger NPC) - keeping as 14 for consistency
+-- Entry 42940 is an invisible trigger NPC (Extinguishing Hope) - excluded here.
+-- See 2025_11_27_world_01.sql for the correct 42940 setup.
 
--- Entry 42940: No reaction info on Wowhead (trigger NPC), setting to 14 for consistency
-UPDATE `creature_template` SET `faction_A` = 14, `faction_H` = 14 WHERE `entry` = 42940;
-
--- All other creatures: Verified on Wowhead as "React: A H" (hostile to both)
+-- All creatures: Verified on Wowhead as "React: A H" (hostile to both)
 -- Setting all to faction 14 (Monster - hostile to both Alliance and Horde)
 UPDATE `creature_template` SET `faction_A` = 14, `faction_H` = 14 WHERE `entry` IN (
 69154, 71864, 71908, 71919, 72033, 72045, 72048, 72049, 72193, 72245, 72970,
