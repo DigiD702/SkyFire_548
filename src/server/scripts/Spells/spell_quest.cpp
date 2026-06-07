@@ -2263,7 +2263,27 @@ public:
                     injuredStormwindInfantry = explicitTarget->ToCreature();
 
             if (!injuredStormwindInfantry)
-                injuredStormwindInfantry = caster->FindNearestCreature(NPC_INJURED_STORMWIND_INFANTRY, 5.0f);
+            {
+                std::list<Creature*> creatures;
+                caster->GetCreatureListWithEntryInGrid(creatures, NPC_INJURED_STORMWIND_INFANTRY, 5.0f);
+
+                float nearestDist = 5.0f;
+                for (Creature* creature : creatures)
+                {
+                    if (!creature->IsAlive())
+                        continue;
+
+                    if (!creature->HasFlag(UNIT_FIELD_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK))
+                        continue;
+
+                    float dist = caster->GetDistance(creature);
+                    if (dist < nearestDist)
+                    {
+                        nearestDist = dist;
+                        injuredStormwindInfantry = creature;
+                    }
+                }
+            }
 
             if (!injuredStormwindInfantry || !injuredStormwindInfantry->IsAlive())
                 return;
