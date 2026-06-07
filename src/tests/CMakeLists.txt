@@ -337,3 +337,70 @@ target_include_directories(world_socket_session_state_tests PRIVATE
 )
 
 add_test(NAME world_socket_session_state_tests COMMAND world_socket_session_state_tests)
+
+add_executable(game_domain_tests
+  GameDomainTestSupport.cpp
+  GameDomainTests.cpp
+)
+
+target_include_directories(game_domain_tests PRIVATE
+  ${CMAKE_BINARY_DIR}
+  ${CMAKE_SOURCE_DIR}/src/server/shared
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Configuration
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Cryptography
+  ${CMAKE_SOURCE_DIR}/src/server/shared/DataStores
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Debugging
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Dynamic
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Dynamic/LinkedReference
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Logging
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Packets
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Platform
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Utilities
+  ${CMAKE_SOURCE_DIR}/src/server/game
+  ${CMAKE_SOURCE_DIR}/src/server/game/Achievements
+  ${CMAKE_SOURCE_DIR}/src/server/game/AI
+  ${CMAKE_SOURCE_DIR}/src/server/game/AI/CoreAI
+  ${CMAKE_SOURCE_DIR}/src/server/game/AI/ScriptedAI
+  ${CMAKE_SOURCE_DIR}/src/server/game/AI/SmartScripts
+  ${CMAKE_SOURCE_DIR}/src/server/game/BattlePet
+  ${CMAKE_SOURCE_DIR}/src/server/game/Chat
+  ${CMAKE_SOURCE_DIR}/src/server/game/Combat
+  ${CMAKE_SOURCE_DIR}/src/server/game/Conditions
+  ${CMAKE_SOURCE_DIR}/src/server/game/DataStores
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Creature
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/GameObject
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Item
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Item/Container
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Object
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Object/Updates
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Pet
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Player
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Transport
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Unit
+  ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Vehicle
+  ${CMAKE_SOURCE_DIR}/src/server/game/Globals
+  ${CMAKE_SOURCE_DIR}/src/server/game/Grids
+  ${CMAKE_SOURCE_DIR}/src/server/game/Grids/Cells
+  ${CMAKE_SOURCE_DIR}/src/server/game/Grids/Notifiers
+  ${CMAKE_SOURCE_DIR}/src/server/game/Groups
+  ${CMAKE_SOURCE_DIR}/src/server/game/Guilds
+  ${CMAKE_SOURCE_DIR}/src/server/game/Handlers
+  ${CMAKE_SOURCE_DIR}/src/server/game/Instances
+  ${CMAKE_SOURCE_DIR}/src/server/game/Maps
+  ${CMAKE_SOURCE_DIR}/src/server/game/Miscellaneous
+  ${CMAKE_SOURCE_DIR}/src/server/game/Movement
+  ${CMAKE_SOURCE_DIR}/src/server/game/Movement/MovementGenerators
+  ${CMAKE_SOURCE_DIR}/src/server/game/Movement/Spline
+  ${CMAKE_SOURCE_DIR}/src/server/game/Movement/Waypoints
+  ${CMAKE_SOURCE_DIR}/src/server/game/Quests
+  ${CMAKE_SOURCE_DIR}/src/server/game/Scripting
+  ${CMAKE_SOURCE_DIR}/src/server/game/Server
+  ${CMAKE_SOURCE_DIR}/src/server/game/Server/Protocol
+  ${CMAKE_SOURCE_DIR}/src/server/game/Spells
+  ${CMAKE_SOURCE_DIR}/src/server/game/Spells/Auras
+  ${CMAKE_SOURCE_DIR}/src/server/game/Tools
+  ${CMAKE_SOURCE_DIR}/src/server/game/World
+  ${Boost_INCLUDE_DIRS}
+)
+
+add_test(NAME game_domain_tests COMMAND game_domain_tests)

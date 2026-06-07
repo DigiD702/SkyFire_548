@@ -2,11 +2,11 @@ name: ubuntu-pch-smoke
 
 on:
   push:
-    branches: [ main, trunk, movement, boost_conversion ]
+    branches: [ main, trunk, movement, boost_conversion, game_refine ]
     paths-ignore:
       - 'sql/**'
   pull_request:
-    branches: [ main, trunk, movement, boost_conversion ]
+    branches: [ main, trunk, movement, boost_conversion, game_refine ]
     paths-ignore:
       - 'sql/**'
 

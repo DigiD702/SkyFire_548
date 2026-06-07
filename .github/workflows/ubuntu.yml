@@ -2,11 +2,11 @@ name: ubuntu-build
 
 on:
   push:
-    branches: [ main, trunk, movement, boost_conversion ]
+    branches: [ main, trunk, movement, boost_conversion, game_refine ]
     paths-ignore:
       - 'sql/**'
   pull_request:
-    branches: [ main, trunk, movement, boost_conversion ]
+    branches: [ main, trunk, movement, boost_conversion, game_refine ]
     paths-ignore:
       - 'sql/**'
 
@@ -135,6 +135,7 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -DTOOLS=ON \
           -DNOPCH=1 \
+          -DSKYFIRE_BUILD_TESTS=ON \
           -DBOOST_ROOT="$BOOST_ROOT" \
           -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT_DIR"
 
@@ -143,6 +144,12 @@ jobs:
       run: |
         set -euo pipefail
         cmake --build "$BUILD_DIR" --parallel "$(nproc)"
+
+    - name: Test
+      shell: bash
+      run: |
+        set -euo pipefail
+        ctest --test-dir "$BUILD_DIR" --output-on-failure
 
     - name: ccache stats
       if: always()
