@@ -26586,6 +26586,9 @@ void Player::HandleFall(MovementInfo const& movementInfo)
         !HasAuraType(SPELL_AURA_HOVER) && !HasAuraType(SPELL_AURA_FEATHER_FALL) &&
         !HasAuraType(SPELL_AURA_FLY) && !IsImmunedToDamage(SPELL_SCHOOL_MASK_NORMAL))
     {
+        if (GetCommandStatus(CHEAT_GOD))
+            return;
+
         //Safe fall, fall height reduction
         int32 safe_fall = GetTotalAuraModifier(SPELL_AURA_SAFE_FALL);
 
