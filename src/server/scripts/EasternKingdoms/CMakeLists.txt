@@ -149,15 +149,15 @@ set(scripts_STAT_SRCS
   #EasternKingdoms/ShadowfangKeep/shadowfang_keep.h
   EasternKingdoms/zone_blasted_lands.cpp
   #REWORKED IN CATACLYSM
-  #EasternKingdoms/ZulAman/boss_halazzi.cpp
-  #EasternKingdoms/ZulAman/boss_hexlord.cpp
-  #EasternKingdoms/ZulAman/boss_daakara.cpp
-  #EasternKingdoms/ZulAman/boss_akilzon.cpp
-  #EasternKingdoms/ZulAman/instance_zulaman.cpp
-  #EasternKingdoms/ZulAman/boss_janalai.cpp
-  #EasternKingdoms/ZulAman/boss_nalorakk.cpp
-  #EasternKingdoms/ZulAman/zulaman.cpp
-  #EasternKingdoms/ZulAman/zulaman.h
+  EasternKingdoms/ZulAman/boss_halazzi.cpp
+  EasternKingdoms/ZulAman/boss_hexlord.cpp
+  EasternKingdoms/ZulAman/boss_daakara.cpp
+  EasternKingdoms/ZulAman/boss_akilzon.cpp
+  EasternKingdoms/ZulAman/instance_zulaman.cpp
+  EasternKingdoms/ZulAman/boss_janalai.cpp
+  EasternKingdoms/ZulAman/boss_nalorakk.cpp
+  EasternKingdoms/ZulAman/zulaman.cpp
+  EasternKingdoms/ZulAman/zulaman.h
   EasternKingdoms/zone_hinterlands.cpp
   EasternKingdoms/zone_silverpine_forest.cpp
   EasternKingdoms/Gilneas/gilneas_chapter_1.cpp

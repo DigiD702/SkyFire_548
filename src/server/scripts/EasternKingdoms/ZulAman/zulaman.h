@@ -68,11 +68,7 @@ enum ZulAmanWorldStates
 template<class AI>
 CreatureAI* GetZulAmanAI(Creature* creature)
 {
-    if (InstanceMap* instance = creature->GetMap()->ToInstanceMap())
-        if (instance->GetInstanceScript())
-            if (instance->GetScriptId() == sObjectMgr->GetScriptId(ZulAmanScriptName))
-                return new AI(creature);
-    return NULL;
+    return GetInstanceAI<AI, Creature>(creature, ZulAmanScriptName);
 }
 
 #endif

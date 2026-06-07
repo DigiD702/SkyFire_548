@@ -82,7 +82,7 @@ class instance_zulaman : public InstanceMapScript
                         MasiveGateGUID = go->GetGUID();
                         AddDoor(go, true);
                         if (ZulAmanState != NOT_STARTED)
-                            go->SetGoState(GO_STATE_ACTIVE);
+                            go->SetGoState(GOState::GO_STATE_ACTIVE);
                         break;
                     default:
                         break;
