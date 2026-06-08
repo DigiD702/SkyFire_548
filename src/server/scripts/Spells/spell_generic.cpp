@@ -893,6 +893,48 @@ class spell_gen_chaos_blast : public SpellScriptLoader
         }
 };
 
+enum ChillheartWrackSoul
+{
+    SPELL_CHILLHEART_WRACK_SOUL_AOE = 111637,
+    SPELL_CHILLHEART_WRACK_SOUL     = 114658
+};
+
+class spell_gen_chillheart_wrack_soul : public SpellScriptLoader
+{
+    public:
+        spell_gen_chillheart_wrack_soul() : SpellScriptLoader("spell_gen_chillheart_wrack_soul") { }
+
+        class spell_gen_chillheart_wrack_soul_SpellScript : public SpellScript
+        {
+            PrepareSpellScript(spell_gen_chillheart_wrack_soul_SpellScript);
+
+            bool Validate(SpellInfo const* /*spellInfo*/) OVERRIDE
+            {
+                if (!sSpellMgr->GetSpellInfo(SPELL_CHILLHEART_WRACK_SOUL_AOE) ||
+                    !sSpellMgr->GetSpellInfo(SPELL_CHILLHEART_WRACK_SOUL))
+                    return false;
+                return true;
+            }
+
+            void HandleDummy(SpellEffIndex /*effIndex*/)
+            {
+                if (Unit* target = GetHitUnit())
+                    if (!target->HasAura(111631))
+                        GetCaster()->CastSpell(target, SPELL_CHILLHEART_WRACK_SOUL, true);
+            }
+
+            void Register() OVERRIDE
+            {
+                OnEffectHitTarget += SpellEffectFn(spell_gen_chillheart_wrack_soul_SpellScript::HandleDummy, EFFECT_0, SPELL_EFFECT_DUMMY);
+            }
+        };
+
+        SpellScript* GetSpellScript() const OVERRIDE
+        {
+            return new spell_gen_chillheart_wrack_soul_SpellScript();
+        }
+};
+
 enum Clone
 {
     SPELL_NIGHTMARE_FIGMENT_MIRROR_IMAGE        = 57528
@@ -3704,6 +3746,7 @@ void AddSC_generic_spell_scripts()
     new spell_gen_burn_brutallus();
     new spell_gen_cannibalize();
     new spell_gen_chaos_blast();
+    new spell_gen_chillheart_wrack_soul();
     new spell_gen_clone();
     new spell_gen_clone_weapon();
     new spell_gen_clone_weapon_aura();
