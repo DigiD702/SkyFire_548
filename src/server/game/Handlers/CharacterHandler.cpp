@@ -215,6 +215,215 @@ bool LoginQueryHolder::Initialize()
     return res;
 }
 
+namespace
+{
+struct CharacterGuidRequest
+{
+    ObjectGuid guid;
+};
+
+struct PlayerLoginRequest
+{
+    ObjectGuid guid;
+    float unk;
+};
+
+struct LoadScreenRequest
+{
+    uint32 mapId;
+    bool unk;
+};
+
+struct UInt32Request
+{
+    uint32 value;
+};
+
+struct UInt8Request
+{
+    uint8 value;
+};
+
+struct FactionInactiveRequest
+{
+    uint32 factionIndex;
+    uint8 status;
+};
+
+struct CharacterRenameRequest
+{
+    ObjectGuid guid;
+    std::string newName;
+};
+
+struct DeclinedNamesRequest
+{
+    ObjectGuid guid;
+    DeclinedName declinedName;
+};
+
+struct AlterAppearanceRequest
+{
+    uint32 hair;
+    uint32 color;
+    uint32 facialHair;
+    uint32 skinColor;
+};
+
+struct CharacterCustomizeRequest
+{
+    ObjectGuid guid;
+    std::string newName;
+    uint8 gender;
+    uint8 skin;
+    uint8 face;
+    uint8 hairStyle;
+    uint8 hairColor;
+    uint8 facialHair;
+};
+
+struct RandomizeCharNameRequest
+{
+    uint8 gender;
+    uint8 race;
+};
+
+CharacterGuidRequest ReadCharacterDeleteRequest(WorldPacket& recvData)
+{
+    CharacterGuidRequest request;
+    recvData.ReadGuidMask(request.guid, 1, 3, 2, 7, 4, 6, 0, 5);
+    recvData.ReadGuidBytes(request.guid, 7, 1, 6, 0, 3, 4, 2, 5);
+    return request;
+}
+
+PlayerLoginRequest ReadPlayerLoginRequest(WorldPacket& recvData)
+{
+    PlayerLoginRequest request;
+    recvData >> request.unk;
+    recvData.ReadGuidMask(request.guid, 1, 4, 7, 3, 2, 6, 5, 0);
+    recvData.ReadGuidBytes(request.guid, 5, 1, 0, 6, 2, 4, 7, 3);
+    return request;
+}
+
+LoadScreenRequest ReadLoadScreenRequest(WorldPacket& recvPacket)
+{
+    LoadScreenRequest request;
+    recvPacket >> request.mapId;
+    request.unk = recvPacket.ReadBit();
+    return request;
+}
+
+UInt32Request ReadUInt32Request(WorldPacket& recvData)
+{
+    UInt32Request request;
+    recvData >> request.value;
+    return request;
+}
+
+UInt8Request ReadUInt8Request(WorldPacket& recvData)
+{
+    UInt8Request request;
+    recvData >> request.value;
+    return request;
+}
+
+FactionInactiveRequest ReadFactionInactiveRequest(WorldPacket& recvData)
+{
+    FactionInactiveRequest request;
+    recvData >> request.factionIndex >> request.status;
+    return request;
+}
+
+void ReadToggleDisplayRequest(WorldPacket& recvData)
+{
+    recvData.read_skip<uint8>(); // unknown, bool?
+}
+
+CharacterRenameRequest ReadCharacterRenameRequest(WorldPacket& recvData)
+{
+    CharacterRenameRequest request;
+    recvData.ReadGuidMask(request.guid, 6, 3, 0);
+    uint32 nameLen = recvData.ReadBits(6);            // Name size
+    recvData.ReadGuidMask(request.guid, 1, 5, 7, 2, 4);
+    recvData.ReadGuidBytes(request.guid, 1, 6, 5);
+    request.newName = recvData.ReadString(nameLen);   // New Name
+    recvData.ReadGuidBytes(request.guid, 2, 4, 3, 7, 0);
+    return request;
+}
+
+DeclinedNamesRequest ReadDeclinedNamesRequest(WorldPacket& recvData)
+{
+    DeclinedNamesRequest request;
+
+    recvData.ReadGuidMask(request.guid, 0, 2, 1, 7, 5, 6, 4, 3);
+    for (uint32 i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
+        request.declinedName.nameLength[i] = recvData.ReadBits(7);
+
+    recvData.FlushBits();
+
+    for (uint32 i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
+        request.declinedName.name[i] = recvData.ReadString(request.declinedName.nameLength[i]);
+
+    recvData.ReadGuidBytes(request.guid, 0, 7, 3, 6, 4, 2, 1, 5);
+    return request;
+}
+
+AlterAppearanceRequest ReadAlterAppearanceRequest(WorldPacket& recvData)
+{
+    AlterAppearanceRequest request;
+    recvData >> request.skinColor >> request.color >> request.hair >> request.facialHair;
+    return request;
+}
+
+CharacterCustomizeRequest ReadCharacterCustomizeRequest(WorldPacket& recvData)
+{
+    CharacterCustomizeRequest request;
+    recvData >> request.hairStyle >> request.gender >> request.skin >> request.face >> request.hairColor >> request.facialHair;
+
+    recvData.ReadGuidMask(request.guid, 2, 6, 1, 0, 7, 5);
+    uint32 nameLen = recvData.ReadBits(6);            // Name size
+    recvData.ReadGuidMask(request.guid, 4, 3);
+    recvData.ReadGuidBytes(request.guid, 4);
+    request.newName = recvData.ReadString(nameLen);   // New Name
+    recvData.ReadGuidBytes(request.guid, 0, 2, 6, 5, 3, 1, 7);
+
+    return request;
+}
+
+CharacterGuidRequest ReadEquipmentSetDeleteRequest(WorldPacket& recvData)
+{
+    CharacterGuidRequest request;
+
+    request.guid[4] = recvData.ReadBit();
+    request.guid[2] = recvData.ReadBit();
+    request.guid[6] = recvData.ReadBit();
+    request.guid[0] = recvData.ReadBit();
+    request.guid[5] = recvData.ReadBit();
+    request.guid[1] = recvData.ReadBit();
+    request.guid[7] = recvData.ReadBit();
+    request.guid[3] = recvData.ReadBit();
+
+    recvData.ReadByteSeq(request.guid[2]);
+    recvData.ReadByteSeq(request.guid[0]);
+    recvData.ReadByteSeq(request.guid[1]);
+    recvData.ReadByteSeq(request.guid[6]);
+    recvData.ReadByteSeq(request.guid[3]);
+    recvData.ReadByteSeq(request.guid[4]);
+    recvData.ReadByteSeq(request.guid[5]);
+    recvData.ReadByteSeq(request.guid[7]);
+
+    return request;
+}
+
+RandomizeCharNameRequest ReadRandomizeCharNameRequest(WorldPacket& recvData)
+{
+    RandomizeCharNameRequest request;
+    recvData >> request.gender;
+    recvData >> request.race;
+    return request;
+}
+}
+
 void WorldSession::HandleCharEnum(PreparedQueryResult result)
 {
     uint32 charCount = 0;
@@ -732,9 +941,8 @@ void WorldSession::HandleCharCreateCallback(PreparedQueryResult result, Characte
 
 void WorldSession::HandleCharDeleteOpcode(WorldPacket& recvData)
 {
-    ObjectGuid guid;
-    recvData.ReadGuidMask(guid, 1, 3, 2, 7, 4, 6, 0, 5);
-    recvData.ReadGuidBytes(guid, 7, 1, 6, 0, 3, 4, 2, 5);
+    CharacterGuidRequest request = ReadCharacterDeleteRequest(recvData);
+    ObjectGuid guid = request.guid;
 
     SF_LOG_DEBUG("network", "Character (Guid: %u) deleted", GUID_LOPART(guid));
 
@@ -799,14 +1007,10 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
     }
 
     m_playerLoading = true;
-    ObjectGuid playerGuid;
-    float unk = 0;
-
     SF_LOG_DEBUG("network", "WORLD: Recvd Player Logon Message");
 
-    recvData >> unk;
-    recvData.ReadGuidMask(playerGuid, 1, 4, 7, 3, 2, 6, 5, 0);
-    recvData.ReadGuidBytes(playerGuid, 5, 1, 0, 6, 2, 4, 7, 3);
+    PlayerLoginRequest request = ReadPlayerLoginRequest(recvData);
+    ObjectGuid playerGuid = request.guid;
 
     //WorldObject* player = ObjectAccessor::GetWorldObject(*GetPlayer(), playerGuid);
     SF_LOG_DEBUG("network", "Character (Guid: %u) logging in", GUID_LOPART(playerGuid));
@@ -832,10 +1036,8 @@ void WorldSession::HandlePlayerLoginOpcode(WorldPacket& recvData)
 void WorldSession::HandleLoadScreenOpcode(WorldPacket& recvPacket)
 {
     SF_LOG_INFO("general", "WORLD: Recvd CMSG_LOADING_SCREEN_NOTIFY");
-    uint32 mapID;
-
-    recvPacket >> mapID;
-    recvPacket.ReadBit();
+    LoadScreenRequest request = ReadLoadScreenRequest(recvPacket);
+    uint32 mapID = request.mapId;
 
     // TODO: Do something with this packet
 }
@@ -1150,8 +1352,8 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
 void WorldSession::HandleSetLfgBonusFactionID(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_SET_LFG_BONUS_FACTION_ID");
-    uint32 FactionID = 0;
-    recvData >> FactionID;
+    UInt32Request request = ReadUInt32Request(recvData);
+    uint32 FactionID = request.value;
     GetPlayer()->SetUInt32Value(PLAYER_FIELD_LFG_BONUS_FACTION_ID, FactionID);
 }
 
@@ -1159,9 +1361,8 @@ void WorldSession::HandleSetFactionAtWar(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_SET_FACTION_ATWAR");
 
-    uint8 FactionIndexID;
-
-    recvData >> FactionIndexID;
+    UInt8Request request = ReadUInt8Request(recvData);
+    uint8 FactionIndexID = request.value;
 
     GetPlayer()->GetReputationMgr().SetAtWar(FactionIndexID);
 }
@@ -1170,9 +1371,8 @@ void WorldSession::HandleSetFactionNotAtWar(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_SET_FACTION_NOTATWAR");
 
-    uint8 FactionIndexID;
-
-    recvData >> FactionIndexID;
+    UInt8Request request = ReadUInt8Request(recvData);
+    uint8 FactionIndexID = request.value;
 
     GetPlayer()->GetReputationMgr().SetNotAtWar(FactionIndexID);
 }
@@ -1186,8 +1386,8 @@ void WorldSession::HandleSetFactionCheat(WorldPacket& /*recvData*/)
 
 void WorldSession::HandleTutorialFlag(WorldPacket& recvData)
 {
-    uint32 data;
-    recvData >> data;
+    UInt32Request request = ReadUInt32Request(recvData);
+    uint32 data = request.value;
 
     uint8 index = uint8(data / 32);
     if (index >= MAX_ACCOUNT_TUTORIAL_VALUES)
@@ -1215,17 +1415,17 @@ void WorldSession::HandleTutorialReset(WorldPacket& /*recvData*/)
 void WorldSession::HandleSetWatchedFactionOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_SET_WATCHED_FACTION");
-    uint32 fact;
-    recvData >> fact;
+    UInt32Request request = ReadUInt32Request(recvData);
+    uint32 fact = request.value;
     GetPlayer()->SetUInt32Value(PLAYER_FIELD_WATCHED_FACTION_INDEX, fact);
 }
 
 void WorldSession::HandleSetFactionInactiveOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_SET_FACTION_INACTIVE");
-    uint32 FactionIndex;
-    uint8 Status;
-    recvData >> FactionIndex >> Status;
+    FactionInactiveRequest request = ReadFactionInactiveRequest(recvData);
+    uint32 FactionIndex = request.factionIndex;
+    uint8 Status = request.status;
 
     _player->GetReputationMgr().SetInactive(FactionIndex, Status);
 }
@@ -1240,26 +1440,22 @@ void WorldSession::HandleRequestForcedReactionsOpcode(WorldPacket& recvData)
 void WorldSession::HandleShowingHelmOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "CMSG_SHOWING_HELM for %s", _player->GetName().c_str());
-    recvData.read_skip<uint8>(); // unknown, bool?
+    ReadToggleDisplayRequest(recvData);
     _player->ToggleFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_HIDE_HELM);
 }
 
 void WorldSession::HandleShowingCloakOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "CMSG_SHOWING_CLOAK for %s", _player->GetName().c_str());
-    recvData.read_skip<uint8>(); // unknown, bool?
+    ReadToggleDisplayRequest(recvData);
     _player->ToggleFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_HIDE_CLOAK);
 }
 
 void WorldSession::HandleCharRenameOpcode(WorldPacket& recvData)
 {
-    ObjectGuid guid;
-    recvData.ReadGuidMask(guid, 6, 3, 0);
-    uint32 Namelen = recvData.ReadBits(6);            // Name size
-    recvData.ReadGuidMask(guid, 1, 5, 7, 2, 4);
-    recvData.ReadGuidBytes(guid, 1, 6, 5);
-    std::string newName = recvData.ReadString(Namelen);  // New Name
-    recvData.ReadGuidBytes(guid, 2, 4, 3, 7, 0);
+    CharacterRenameRequest request = ReadCharacterRenameRequest(recvData);
+    ObjectGuid guid = request.guid;
+    std::string newName = request.newName;
 
     // prevent character rename to invalid name
     if (!normalizePlayerName(newName))
@@ -1352,20 +1548,9 @@ void WorldSession::HandleChangePlayerNameOpcodeCallBack(PreparedQueryResult resu
 
 void WorldSession::HandleSetPlayerDeclinedNames(WorldPacket& recvData)
 {
-    ObjectGuid guid;
-    DeclinedName declinedname;
-
-    recvData.ReadGuidMask(guid, 0, 2, 1, 7, 5, 6, 4, 3);
-    for (uint32 i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
-    {
-        declinedname.nameLength[i] = recvData.ReadBits(7);
-    }
-    recvData.FlushBits();
-    for (uint32 i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
-    {
-        declinedname.name[i] = recvData.ReadString(declinedname.nameLength[i]);
-    }
-    recvData.ReadGuidBytes(guid, 0, 7, 3, 6, 4, 2, 1, 5);
+    DeclinedNamesRequest request = ReadDeclinedNamesRequest(recvData);
+    ObjectGuid guid = request.guid;
+    DeclinedName declinedname = request.declinedName;
 
     // not accept declined names for unsupported languages
     std::string name;
@@ -1466,8 +1651,11 @@ void WorldSession::HandleAlterAppearance(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "CMSG_ALTER_APPEARANCE");
 
-    uint32 Hair, Color, FacialHair, SkinColor;
-    recvData >> SkinColor >> Color >> Hair >> FacialHair;
+    AlterAppearanceRequest request = ReadAlterAppearanceRequest(recvData);
+    uint32 Hair = request.hair;
+    uint32 Color = request.color;
+    uint32 FacialHair = request.facialHair;
+    uint32 SkinColor = request.skinColor;
 
     BarberShopStyleEntry const* bs_hair = sBarberShopStyleStore.LookupEntry(Hair);
 
@@ -1529,17 +1717,15 @@ void WorldSession::SendBarberShopResult(BarberShopResult result)
 
 void WorldSession::HandleCharCustomize(WorldPacket& recvData)
 {
-    ObjectGuid guid;
-    uint8 gender, skin, face, hairStyle, hairColor, facialHair;
-
-    recvData >> hairStyle >> gender >> skin >> face >> hairColor >> facialHair;
-
-    recvData.ReadGuidMask(guid, 2, 6, 1, 0, 7, 5);
-    uint32 Namelen = recvData.ReadBits(6);            // Name size
-    recvData.ReadGuidMask(guid, 4, 3);
-    recvData.ReadGuidBytes(guid, 4);
-    std::string newName = recvData.ReadString(Namelen);  // New Name
-    recvData.ReadGuidBytes(guid, 0, 2, 6, 5, 3, 1, 7);
+    CharacterCustomizeRequest request = ReadCharacterCustomizeRequest(recvData);
+    ObjectGuid guid = request.guid;
+    std::string newName = request.newName;
+    uint8 gender = request.gender;
+    uint8 skin = request.skin;
+    uint8 face = request.face;
+    uint8 hairStyle = request.hairStyle;
+    uint8 hairColor = request.hairColor;
+    uint8 facialHair = request.facialHair;
 
     if (!IsLegitCharacterForAccount(GUID_LOPART(guid)))
     {
@@ -1757,25 +1943,8 @@ void WorldSession::HandleEquipmentSetDelete(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "CMSG_EQUIPMENT_SET_DELETE");
 
-    ObjectGuid setGuid;
-
-    setGuid[4] = recvData.ReadBit();
-    setGuid[2] = recvData.ReadBit();
-    setGuid[6] = recvData.ReadBit();
-    setGuid[0] = recvData.ReadBit();
-    setGuid[5] = recvData.ReadBit();
-    setGuid[1] = recvData.ReadBit();
-    setGuid[7] = recvData.ReadBit();
-    setGuid[3] = recvData.ReadBit();
-
-    recvData.ReadByteSeq(setGuid[2]);
-    recvData.ReadByteSeq(setGuid[0]);
-    recvData.ReadByteSeq(setGuid[1]);
-    recvData.ReadByteSeq(setGuid[6]);
-    recvData.ReadByteSeq(setGuid[3]);
-    recvData.ReadByteSeq(setGuid[4]);
-    recvData.ReadByteSeq(setGuid[5]);
-    recvData.ReadByteSeq(setGuid[7]);
+    CharacterGuidRequest request = ReadEquipmentSetDeleteRequest(recvData);
+    ObjectGuid setGuid = request.guid;
 
     _player->DeleteEquipmentSet(setGuid);
 }
@@ -2436,10 +2605,9 @@ void WorldSession::HandleCharFactionOrRaceChange(WorldPacket& recvData)
 
 void WorldSession::HandleRandomizeCharNameOpcode(WorldPacket& recvData)
 {
-    uint8 gender, race;
-
-    recvData >> gender;
-    recvData >> race;
+    RandomizeCharNameRequest request = ReadRandomizeCharNameRequest(recvData);
+    uint8 gender = request.gender;
+    uint8 race = request.race;
 
     if (!Player::IsValidRace(race))
     {
