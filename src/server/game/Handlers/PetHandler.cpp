@@ -537,6 +537,212 @@ SetPetSpecializationRequest ReadSetPetSpecializationRequest(WorldPacket& recvDat
     recvData.ReadGuidBytes(request.petGuid, 7, 5, 4, 3, 0, 2, 6, 1);
     return request;
 }
+
+Unit* ValidatePetActionRequest(Player* player, PetActionRequest& request, uint8 flag, uint32 spellId)
+{
+    Unit* pet = ObjectAccessor::GetUnit(*player, request.petGuid);
+    if (!pet)
+    {
+        SF_LOG_ERROR("network", "HandlePetAction: Pet (GUID: %u) doesn't exist for player %s (GUID: %u)", uint32(GUID_LOPART(request.petGuid)), player->GetName().c_str(), GUID_LOPART(player->GetGUID()));
+        return NULL;
+    }
+
+    if (pet != player->GetFirstControlled())
+    {
+        SF_LOG_ERROR("network", "HandlePetAction: Pet (GUID: %u) does not belong to player %s (GUID: %u)", uint32(GUID_LOPART(request.petGuid)), player->GetName().c_str(), GUID_LOPART(player->GetGUID()));
+        return NULL;
+    }
+
+    if (!pet->IsAlive())
+    {
+        SpellInfo const* spell = (flag == ACT_ENABLED || flag == ACT_PASSIVE) ? sSpellMgr->GetSpellInfo(spellId) : NULL;
+        if (!spell)
+            return NULL;
+        if (!(spell->Attributes & SPELL_ATTR0_CASTABLE_WHILE_DEAD))
+            return NULL;
+    }
+
+    /// @todo allow control charmed player?
+    if (pet->GetTypeId() == TypeID::TYPEID_PLAYER && !(flag == ACT_COMMAND && spellId == COMMAND_ATTACK))
+        return NULL;
+
+    return pet;
+}
+
+Unit* ValidatePetStopAttackRequest(Player* player, PetGuidRequest& request)
+{
+    Unit* pet = ObjectAccessor::GetCreatureOrPetOrVehicle(*player, request.guid);
+    if (!pet)
+    {
+        SF_LOG_ERROR("network", "HandlePetStopAttack: Pet %u does not exist", uint32(GUID_LOPART(request.guid)));
+        return NULL;
+    }
+
+    if (pet != player->GetPet() && pet != player->GetCharm())
+    {
+        SF_LOG_ERROR("network", "HandlePetStopAttack: Pet GUID %u isn't a pet or charmed creature of player %s",
+            uint32(GUID_LOPART(request.guid)), player->GetName().c_str());
+        return NULL;
+    }
+
+    if (!pet->IsAlive())
+        return NULL;
+
+    return pet;
+}
+
+Unit* ValidatePetSetActionRequest(Player* player, PetSetActionRequest& request, CharmInfo*& charmInfo)
+{
+    charmInfo = NULL;
+
+    Unit* pet = ObjectAccessor::GetUnit(*player, request.petGuid);
+    if (!pet || pet != player->GetFirstControlled())
+    {
+        SF_LOG_ERROR("network", "HandlePetSetAction: Unknown pet (GUID: %u) or pet owner (GUID: %u)", GUID_LOPART(request.petGuid), player->GetGUIDLow());
+        return NULL;
+    }
+
+    charmInfo = pet->GetCharmInfo();
+    if (!charmInfo)
+    {
+        SF_LOG_ERROR("network", "WorldSession::HandlePetSetAction: object (GUID: %u TypeId: %u) is considered pet-like but doesn't have a charminfo!", pet->GetGUIDLow(), uint8(pet->GetTypeId()));
+        return NULL;
+    }
+
+    //ignore invalid position
+    if (request.index >= MAX_UNIT_ACTION_BAR_INDEX)
+        return NULL;
+
+    return pet;
+}
+
+Pet* ValidatePetRenameTarget(Player* player)
+{
+    Pet* pet = player->GetPet();
+
+    if (!pet || pet->getPetType() != PetType::HUNTER_PET ||
+        !pet->HasByteFlag(UNIT_FIELD_SHAPESHIFT_FORM, 2, UNIT_CAN_BE_RENAMED) ||
+        !pet->GetCharmInfo())
+        return NULL;
+
+    return pet;
+}
+
+bool ValidatePetRenameName(WorldSession* session, PetRenameRequest& request)
+{
+    PetNameInvalidReason res = ObjectMgr::CheckPetName(request.name);
+    if (res != PET_NAME_SUCCESS)
+    {
+        session->SendPetNameInvalid(res, request.name, NULL, request.petNumber);
+        return false;
+    }
+
+    if (sObjectMgr->IsReservedName(request.name))
+    {
+        session->SendPetNameInvalid(PET_NAME_RESERVED, request.name, NULL, request.petNumber);
+        return false;
+    }
+
+    return true;
+}
+
+bool ValidatePetDeclinedNames(WorldSession* session, PetRenameRequest& request)
+{
+    std::wstring wname;
+    if (!Utf8toWStr(request.name, wname))
+        return false;
+
+    if (!ObjectMgr::CheckDeclinedNames(wname, request.declinedName))
+    {
+        session->SendPetNameInvalid(PET_NAME_DECLENSION_DOESNT_MATCH_BASE_NAME, request.name, &request.declinedName, request.petNumber);
+        return false;
+    }
+
+    return true;
+}
+
+Creature* ValidatePetAbandonRequest(Player* player, PetGuidRequest& request)
+{
+    if (!player->IsInWorld())
+        return NULL;
+
+    return ObjectAccessor::GetCreatureOrPetOrVehicle(*player, request.guid);
+}
+
+Creature* ValidatePetAutocastRequest(Player* player, PetSpellAutocastRequest& request, SpellInfo const*& spellInfo, CharmInfo*& charmInfo)
+{
+    spellInfo = NULL;
+    charmInfo = NULL;
+
+    if (!player->GetGuardianPet() && !player->GetCharm())
+        return NULL;
+
+    if (ObjectAccessor::FindPlayer(request.petGuid))
+        return NULL;
+
+    Creature* pet = ObjectAccessor::GetCreatureOrPetOrVehicle(*player, request.petGuid);
+    if (!pet || (pet != player->GetGuardianPet() && pet != player->GetCharm()))
+    {
+        SF_LOG_ERROR("network", "HandlePetSpellAutocastOpcode.Pet %u isn't pet of player %s (GUID: %u).", uint32(GUID_LOPART(request.petGuid)), player->GetName().c_str(), GUID_LOPART(player->GetGUID()));
+        return NULL;
+    }
+
+    spellInfo = sSpellMgr->GetSpellInfo(request.spellId);
+    // do not add not learned spells/ passive spells
+    if (!pet->HasSpell(request.spellId) || !spellInfo->IsAutocastable())
+        return NULL;
+
+    charmInfo = pet->GetCharmInfo();
+    if (!charmInfo)
+    {
+        SF_LOG_ERROR("network", "WorldSession::HandlePetSpellAutocastOpcod: object (GUID: %u TypeId: %u) is considered pet-like but doesn't have a charminfo!", pet->GetGUIDLow(), uint8(pet->GetTypeId()));
+        return NULL;
+    }
+
+    return pet;
+}
+
+Unit* ValidatePetCastRequest(Player* player, PetCastSpellRequest& request, SpellInfo const*& spellInfo)
+{
+    spellInfo = NULL;
+
+    // This opcode is also sent from charmed and possessed units (players and creatures)
+    if (!player->GetGuardianPet() && !player->GetCharm())
+        return NULL;
+
+    Unit* caster = ObjectAccessor::GetUnit(*player, request.petGuid);
+    if (!caster || (caster != player->GetGuardianPet() && caster != player->GetCharm()))
+    {
+        SF_LOG_ERROR("network", "HandlePetCastSpellOpcode: Pet %u isn't pet of player %s (GUID: %u).", uint32(GUID_LOPART(request.petGuid)), player->GetName().c_str(), GUID_LOPART(player->GetGUID()));
+        return NULL;
+    }
+
+    spellInfo = sSpellMgr->GetSpellInfo(request.spellId);
+    if (!spellInfo)
+    {
+        SF_LOG_ERROR("network", "WORLD: unknown PET spell id %i", request.spellId);
+        return NULL;
+    }
+
+    // do not cast not learned spells
+    if (!caster->HasSpell(request.spellId) || spellInfo->IsPassive())
+        return NULL;
+
+    return caster;
+}
+
+Pet* ValidatePetSpecializationRequest(Player* player, SetPetSpecializationRequest& request)
+{
+    if (!player->IsInWorld())
+        return NULL;
+
+    Pet* pet = ObjectAccessor::GetPet(*player, request.petGuid);
+    if (!pet || !pet->IsPet() || pet->getPetType() != PetType::HUNTER_PET ||
+        pet->GetOwnerGUID() != player->GetGUID() || !pet->GetCharmInfo())
+        return NULL;
+
+    return pet;
+}
 }
 
 void WorldSession::HandleDismissCritter(WorldPacket& recvData)
@@ -569,32 +775,10 @@ void WorldSession::HandlePetAction(WorldPacket& recvData) //  sub_68C8FD [5.4.8 
     uint8 Flag = UNIT_ACTION_BUTTON_TYPE(request.action);             //delete = 0x07 CastSpell = C1
 
     // used also for charmed creature
-    Unit* pet = ObjectAccessor::GetUnit(*_player, request.petGuid);
     SF_LOG_DEBUG("network", "HandlePetAction: Pet (GUID: %u) - Flag: %u, SpellID: %u, Target: %u.", uint32(GUID_LOPART(request.petGuid)), uint32(Flag), SpellID, uint32(GUID_LOPART(request.targetGuid)));
 
+    Unit* pet = ValidatePetActionRequest(GetPlayer(), request, Flag, SpellID);
     if (!pet)
-    {
-        SF_LOG_ERROR("network", "HandlePetAction: Pet (GUID: %u) doesn't exist for player %s (GUID: %u)", uint32(GUID_LOPART(request.petGuid)), GetPlayer()->GetName().c_str(), GUID_LOPART(GetPlayer()->GetGUID()));
-        return;
-    }
-
-    if (pet != GetPlayer()->GetFirstControlled())
-    {
-        SF_LOG_ERROR("network", "HandlePetAction: Pet (GUID: %u) does not belong to player %s (GUID: %u)", uint32(GUID_LOPART(request.petGuid)), GetPlayer()->GetName().c_str(), GUID_LOPART(GetPlayer()->GetGUID()));
-        return;
-    }
-
-    if (!pet->IsAlive())
-    {
-        SpellInfo const* spell = (Flag == ACT_ENABLED || Flag == ACT_PASSIVE) ? sSpellMgr->GetSpellInfo(SpellID) : NULL;
-        if (!spell)
-            return;
-        if (!(spell->Attributes & SPELL_ATTR0_CASTABLE_WHILE_DEAD))
-            return;
-    }
-
-    /// @todo allow control charmed player?
-    if (pet->GetTypeId() == TypeID::TYPEID_PLAYER && !(Flag == ACT_COMMAND && SpellID == COMMAND_ATTACK))
         return;
 
     if (GetPlayer()->m_Controlled.size() == 1)
@@ -617,22 +801,8 @@ void WorldSession::HandlePetStopAttack(WorldPacket& recvData)
 
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_PET_STOP_ATTACK for GUID " UI64FMTD "", (uint64)request.guid);
 
-    Unit* pet = ObjectAccessor::GetCreatureOrPetOrVehicle(*_player, request.guid);
-
+    Unit* pet = ValidatePetStopAttackRequest(GetPlayer(), request);
     if (!pet)
-    {
-        SF_LOG_ERROR("network", "HandlePetStopAttack: Pet %u does not exist", uint32(GUID_LOPART(request.guid)));
-        return;
-    }
-
-    if (pet != GetPlayer()->GetPet() && pet != GetPlayer()->GetCharm())
-    {
-        SF_LOG_ERROR("network", "HandlePetStopAttack: Pet GUID %u isn't a pet or charmed creature of player %s",
-            uint32(GUID_LOPART(request.guid)), GetPlayer()->GetName().c_str());
-        return;
-    }
-
-    if (!pet->IsAlive())
         return;
 
     pet->AttackStop();
@@ -986,23 +1156,9 @@ void WorldSession::HandlePetSetAction(WorldPacket& recvData)
 
     PetSetActionRequest request = ReadPetSetActionRequest(recvData);
 
-    Unit* pet = ObjectAccessor::GetUnit(*_player, request.petGuid);
-
-    if (!pet || pet != _player->GetFirstControlled())
-    {
-        SF_LOG_ERROR("network", "HandlePetSetAction: Unknown pet (GUID: %u) or pet owner (GUID: %u)", GUID_LOPART(request.petGuid), _player->GetGUIDLow());
-        return;
-    }
-
-    CharmInfo* charmInfo = pet->GetCharmInfo();
-    if (!charmInfo)
-    {
-        SF_LOG_ERROR("network", "WorldSession::HandlePetSetAction: object (GUID: %u TypeId: %u) is considered pet-like but doesn't have a charminfo!", pet->GetGUIDLow(), uint8(pet->GetTypeId()));
-        return;
-    }
-
-    //ignore invalid position
-    if (request.index >= MAX_UNIT_ACTION_BAR_INDEX)
+    CharmInfo* charmInfo = NULL;
+    Unit* pet = ValidatePetSetActionRequest(GetPlayer(), request, charmInfo);
+    if (!pet)
         return;
 
     uint32 spell_id = UNIT_ACTION_BUTTON_ACTION(request.action);
@@ -1047,25 +1203,12 @@ void WorldSession::HandlePetRename(WorldPacket& recvData)
 
     PetRenameRequest request = ReadPetRenameRequest(recvData);
 
-    Pet* pet = _player->GetPet();
-
-    if (!pet || pet->getPetType() != PetType::HUNTER_PET ||
-        !pet->HasByteFlag(UNIT_FIELD_SHAPESHIFT_FORM, 2, UNIT_CAN_BE_RENAMED) ||
-        !pet->GetCharmInfo())
+    Pet* pet = ValidatePetRenameTarget(GetPlayer());
+    if (!pet)
         return;
 
-    PetNameInvalidReason res = ObjectMgr::CheckPetName(request.name);
-    if (res != PET_NAME_SUCCESS)
-    {
-        SendPetNameInvalid(res, request.name, NULL, request.petNumber);
+    if (!ValidatePetRenameName(this, request))
         return;
-    }
-
-    if (sObjectMgr->IsReservedName(request.name))
-    {
-        SendPetNameInvalid(PET_NAME_RESERVED, request.name, NULL, request.petNumber);
-        return;
-    }
 
     pet->SetName(request.name);
 
@@ -1075,17 +1218,8 @@ void WorldSession::HandlePetRename(WorldPacket& recvData)
     pet->RemoveByteFlag(UNIT_FIELD_SHAPESHIFT_FORM, 2, UNIT_CAN_BE_RENAMED);
 
     if (request.hasDeclinedNames)
-    {
-        std::wstring wname;
-        if (!Utf8toWStr(request.name, wname))
+        if (!ValidatePetDeclinedNames(this, request))
             return;
-
-        if (!ObjectMgr::CheckDeclinedNames(wname, request.declinedName))
-        {
-            SendPetNameInvalid(PET_NAME_DECLENSION_DOESNT_MATCH_BASE_NAME, request.name, &request.declinedName, request.petNumber);
-            return;
-        }
-    }
 
     SQLTransaction trans = CharacterDatabase.BeginTransaction();
     if (request.hasDeclinedNames)
@@ -1120,11 +1254,8 @@ void WorldSession::HandlePetAbandon(WorldPacket& recvData)
 
     SF_LOG_INFO("network", "HandlePetAbandon. CMSG_PET_ABANDON pet guid is %u", GUID_LOPART(request.guid));
 
-    if (!_player->IsInWorld())
-        return;
-
     // pet/charmed
-    Creature* pet = ObjectAccessor::GetCreatureOrPetOrVehicle(*_player, request.guid);
+    Creature* pet = ValidatePetAbandonRequest(GetPlayer(), request);
     if (pet)
     {
         if (pet->IsPet())
@@ -1140,31 +1271,11 @@ void WorldSession::HandlePetSpellAutocastOpcode(WorldPacket& recvPacket)
 
     PetSpellAutocastRequest request = ReadPetSpellAutocastRequest(recvPacket);
 
-    if (!_player->GetGuardianPet() && !_player->GetCharm())
+    SpellInfo const* spellInfo = NULL;
+    CharmInfo* charmInfo = NULL;
+    Creature* pet = ValidatePetAutocastRequest(GetPlayer(), request, spellInfo, charmInfo);
+    if (!pet)
         return;
-
-    if (ObjectAccessor::FindPlayer(request.petGuid))
-        return;
-
-    Creature* pet = ObjectAccessor::GetCreatureOrPetOrVehicle(*_player, request.petGuid);
-
-    if (!pet || (pet != _player->GetGuardianPet() && pet != _player->GetCharm()))
-    {
-        SF_LOG_ERROR("network", "HandlePetSpellAutocastOpcode.Pet %u isn't pet of player %s (GUID: %u).", uint32(GUID_LOPART(request.petGuid)), GetPlayer()->GetName().c_str(), GUID_LOPART(GetPlayer()->GetGUID()));
-        return;
-    }
-
-    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(request.spellId);
-    // do not add not learned spells/ passive spells
-    if (!pet->HasSpell(request.spellId) || !spellInfo->IsAutocastable())
-        return;
-
-    CharmInfo* charmInfo = pet->GetCharmInfo();
-    if (!charmInfo)
-    {
-        SF_LOG_ERROR("network", "WorldSession::HandlePetSpellAutocastOpcod: object (GUID: %u TypeId: %u) is considered pet-like but doesn't have a charminfo!", pet->GetGUIDLow(), uint8(pet->GetTypeId()));
-        return;
-    }
 
     if (pet->IsPet())
         ((Pet*)pet)->ToggleAutocast(spellInfo, request.state);
@@ -1182,27 +1293,9 @@ void WorldSession::HandlePetCastSpellOpcode(WorldPacket& recvPacket)
 
     SF_LOG_DEBUG("network", "WORLD: CMSG_PET_CAST_SPELL, guid: " UI64FMTD ", castCount: %u, spellId %u, castFlags %u", uint64(request.petGuid), request.castCount, request.spellId, request.castFlags);
 
-    // This opcode is also sent from charmed and possessed units (players and creatures)
-    if (!_player->GetGuardianPet() && !_player->GetCharm())
-        return;
-
-    Unit* caster = ObjectAccessor::GetUnit(*_player, request.petGuid);
-
-    if (!caster || (caster != _player->GetGuardianPet() && caster != _player->GetCharm()))
-    {
-        SF_LOG_ERROR("network", "HandlePetCastSpellOpcode: Pet %u isn't pet of player %s (GUID: %u).", uint32(GUID_LOPART(request.petGuid)), GetPlayer()->GetName().c_str(), GUID_LOPART(GetPlayer()->GetGUID()));
-        return;
-    }
-
-    SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(request.spellId);
-    if (!spellInfo)
-    {
-        SF_LOG_ERROR("network", "WORLD: unknown PET spell id %i", request.spellId);
-        return;
-    }
-
-    // do not cast not learned spells
-    if (!caster->HasSpell(request.spellId) || spellInfo->IsPassive())
+    SpellInfo const* spellInfo = NULL;
+    Unit* caster = ValidatePetCastRequest(GetPlayer(), request, spellInfo);
+    if (!caster)
         return;
 
     SpellCastTargets targets;
@@ -1300,12 +1393,8 @@ void WorldSession::HandleSetPetSpecialization(WorldPacket& recvData)
 
     SetPetSpecializationRequest request = ReadSetPetSpecializationRequest(recvData);
 
-    if (!_player->IsInWorld())
-        return;
-
-    Pet* pet = ObjectAccessor::GetPet(*_player, request.petGuid);
-    if (!pet || !pet->IsPet() || ((Pet*)pet)->getPetType() != PetType::HUNTER_PET ||
-        pet->GetOwnerGUID() != _player->GetGUID() || !pet->GetCharmInfo())
+    Pet* pet = ValidatePetSpecializationRequest(GetPlayer(), request);
+    if (!pet)
         return;
 
     pet->SetSpec(pet->GetPetSpecByTalentTab(request.talentTab));
