@@ -6,6 +6,7 @@
 #include "Cell.h"
 #include "CurrencyFormulas.h"
 #include "GridDefines.h"
+#include "SpellTargeting.h"
 #include "SpellValidation.h"
 #include "ThreatCalcHelper.h"
 #include "WorldPacket.h"
@@ -23,6 +24,11 @@ namespace
             std::cerr << message << '\n';
 
         return condition;
+    }
+
+    bool ExpectNear(float actual, float expected, float epsilon, char const* message)
+    {
+        return Expect(std::fabs(actual - expected) <= epsilon, message);
     }
 
     bool TestCurrencyFormulaBoundaries()
@@ -158,6 +164,83 @@ namespace
         return passed;
     }
 
+    bool TestSpellTargetingRules()
+    {
+        bool passed = true;
+
+        passed &= Expect(GetTargetFlagMask(TARGET_OBJECT_TYPE_NONE) == TARGET_FLAG_NONE,
+            "Empty target object type should not require an explicit target flag");
+        passed &= Expect(GetTargetFlagMask(TARGET_OBJECT_TYPE_UNIT_AND_DEST) ==
+            (TARGET_FLAG_DEST_LOCATION | TARGET_FLAG_UNIT),
+            "Unit-and-destination object type should require both unit and destination flags");
+        passed &= Expect(GetTargetFlagMask(TARGET_OBJECT_TYPE_CORPSE) ==
+            (TARGET_FLAG_CORPSE_ALLY | TARGET_FLAG_CORPSE_ENEMY),
+            "Generic corpse object type should allow both corpse target flags");
+        passed &= Expect(GetTargetFlagMask(TARGET_OBJECT_TYPE_GOBJ_ITEM) == TARGET_FLAG_GAMEOBJECT_ITEM,
+            "Gameobject item object type should map to the gameobject item flag");
+
+        SpellImplicitTargetInfo enemyTarget(TARGET_UNIT_TARGET_ENEMY);
+        passed &= Expect(!enemyTarget.IsArea(), "Single enemy unit target should not be area-targeted");
+        passed &= Expect(enemyTarget.GetSelectionCategory() == TARGET_SELECT_CATEGORY_DEFAULT,
+            "Single enemy unit target should use default target selection");
+        passed &= Expect(enemyTarget.GetReferenceType() == TARGET_REFERENCE_TYPE_TARGET,
+            "Single enemy unit target should reference the selected target");
+        passed &= Expect(enemyTarget.GetObjectType() == TARGET_OBJECT_TYPE_UNIT,
+            "Single enemy unit target should use unit object type");
+        passed &= Expect(enemyTarget.GetCheckType() == TARGET_CHECK_ENEMY,
+            "Single enemy unit target should require enemy target checks");
+
+        bool srcSet = false;
+        bool dstSet = false;
+        passed &= Expect(enemyTarget.GetExplicitTargetMask(srcSet, dstSet) == TARGET_FLAG_UNIT_ENEMY,
+            "Single enemy unit target should request the enemy-unit explicit target flag");
+        passed &= Expect(!srcSet && !dstSet,
+            "Single enemy unit target should not mark source or destination locations as consumed");
+
+        SpellImplicitTargetInfo coneTarget(TARGET_UNIT_CONE_ENEMY_54);
+        passed &= Expect(coneTarget.IsArea(), "Cone enemy target should be area-targeted");
+        passed &= Expect(coneTarget.GetDirectionType() == TARGET_DIR_FRONT,
+            "Cone enemy target should face forward");
+        passed &= ExpectNear(coneTarget.CalcDirectionAngle(), 0.0f, 0.001f,
+            "Forward direction target should have zero angle");
+
+        SpellImplicitTargetInfo rightDest(TARGET_DEST_CASTER_RIGHT);
+        passed &= ExpectNear(rightDest.CalcDirectionAngle(), static_cast<float>(-M_PI / 2), 0.001f,
+            "Right caster destination should resolve to negative half-pi");
+
+        SpellImplicitTargetInfo frontLeftDest(TARGET_DEST_CASTER_FRONT_LEFT);
+        passed &= ExpectNear(frontLeftDest.CalcDirectionAngle(), static_cast<float>(M_PI / 4), 0.001f,
+            "Front-left caster destination should resolve to quarter-pi");
+
+        SpellImplicitTargetInfo randomDest(TARGET_DEST_CASTER_RANDOM);
+        passed &= ExpectNear(randomDest.CalcDirectionAngle(), static_cast<float>(M_PI / 2), 0.001f,
+            "Random caster destination should scale the normalized random value across a full circle");
+
+        SpellImplicitTargetInfo sourceMarker(TARGET_SRC_CASTER);
+        srcSet = false;
+        dstSet = false;
+        passed &= Expect(sourceMarker.GetExplicitTargetMask(srcSet, dstSet) == TARGET_FLAG_NONE,
+            "Caster source marker should not request an explicit target flag");
+        passed &= Expect(srcSet && !dstSet,
+            "Caster source marker should mark the source location as consumed");
+
+        SpellImplicitTargetInfo trajectoryTarget(TARGET_DEST_TRAJ);
+        srcSet = false;
+        dstSet = false;
+        passed &= Expect(trajectoryTarget.GetExplicitTargetMask(srcSet, dstSet) ==
+            (TARGET_FLAG_SOURCE_LOCATION | TARGET_FLAG_DEST_LOCATION),
+            "Trajectory target should request both source and destination when neither is present");
+        passed &= Expect(!srcSet && dstSet,
+            "Trajectory target should mark destination consumption through its object type");
+
+        srcSet = true;
+        dstSet = false;
+        passed &= Expect(trajectoryTarget.GetExplicitTargetMask(srcSet, dstSet) == TARGET_FLAG_DEST_LOCATION,
+            "Trajectory target should only request destination when source is already present");
+
+        return passed;
+    }
+
     bool TestGridAndCellPrimitives()
     {
         bool passed = true;
@@ -213,6 +296,7 @@ int main()
     passed &= TestWorldPacketContainerBehavior();
     passed &= TestThreatSpellModifierRules();
     passed &= TestSpellValidationMasks();
+    passed &= TestSpellTargetingRules();
     passed &= TestGridAndCellPrimitives();
 
     return passed ? 0 : 1;

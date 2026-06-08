@@ -10,6 +10,11 @@
 #include <iostream>
 #include <sstream>
 
+double rand_norm(void)
+{
+    return 0.25;
+}
+
 ByteBufferPositionException::ByteBufferPositionException(bool add, size_t pos, size_t size, size_t valueSize)
 {
     std::ostringstream ss;
