@@ -1,0 +1,172 @@
+/*
+* This file is part of Project SkyFire https://www.projectskyfire.org.
+* See LICENSE.md file for Copyright information
+*/
+
+#include "RuntimeMetrics.h"
+
+#include <sstream>
+
+namespace
+{
+    void StoreMax(std::atomic<uint32>& target, uint32 value)
+    {
+        uint32 current = target.load(std::memory_order_relaxed);
+        while (current < value &&
+            !target.compare_exchange_weak(current, value, std::memory_order_relaxed, std::memory_order_relaxed))
+        {
+        }
+    }
+}
+
+namespace Skyfire
+{
+namespace Diagnostics
+{
+    RuntimeSampleSnapshot::RuntimeSampleSnapshot()
+        : SampleCount(0), Last(0), Average(0), Maximum(0) { }
+
+    MapUpdaterMetricsSnapshot::MapUpdaterMetricsSnapshot()
+        : Scheduled(0), Completed(0), ScheduleFailures(0), Pending(0), PendingHighWater(0), Wait() { }
+
+    RuntimeMetricsSnapshot::RuntimeMetricsSnapshot()
+        : WorldUpdate(), MapUpdatePasses(), MapUpdater() { }
+
+    RuntimeMetrics::RuntimeSample::RuntimeSample()
+        : _sampleCount(0), _total(0), _last(0), _maximum(0) { }
+
+    void RuntimeMetrics::RuntimeSample::Reset()
+    {
+        _sampleCount.store(0, std::memory_order_relaxed);
+        _total.store(0, std::memory_order_relaxed);
+        _last.store(0, std::memory_order_relaxed);
+        _maximum.store(0, std::memory_order_relaxed);
+    }
+
+    void RuntimeMetrics::RuntimeSample::Record(uint32 value)
+    {
+        _sampleCount.fetch_add(1, std::memory_order_relaxed);
+        _total.fetch_add(value, std::memory_order_relaxed);
+        _last.store(value, std::memory_order_relaxed);
+        StoreMax(_maximum, value);
+    }
+
+    RuntimeSampleSnapshot RuntimeMetrics::RuntimeSample::Snapshot() const
+    {
+        RuntimeSampleSnapshot snapshot;
+        snapshot.SampleCount = _sampleCount.load(std::memory_order_relaxed);
+        snapshot.Last = _last.load(std::memory_order_relaxed);
+        snapshot.Maximum = _maximum.load(std::memory_order_relaxed);
+
+        uint64 const total = _total.load(std::memory_order_relaxed);
+        snapshot.Average = snapshot.SampleCount ? static_cast<uint32>(total / snapshot.SampleCount) : 0;
+
+        return snapshot;
+    }
+
+    RuntimeMetrics::RuntimeMetrics()
+        : _worldUpdate(),
+          _mapUpdatePasses(),
+          _mapUpdateWait(),
+          _mapUpdateScheduled(0),
+          _mapUpdateCompleted(0),
+          _mapUpdateScheduleFailures(0),
+          _mapUpdatePending(0),
+          _mapUpdatePendingHighWater(0) { }
+
+    void RuntimeMetrics::Reset()
+    {
+        _worldUpdate.Reset();
+        _mapUpdatePasses.Reset();
+        _mapUpdateWait.Reset();
+        _mapUpdateScheduled.store(0, std::memory_order_relaxed);
+        _mapUpdateCompleted.store(0, std::memory_order_relaxed);
+        _mapUpdateScheduleFailures.store(0, std::memory_order_relaxed);
+        _mapUpdatePending.store(0, std::memory_order_relaxed);
+        _mapUpdatePendingHighWater.store(0, std::memory_order_relaxed);
+    }
+
+    void RuntimeMetrics::RecordWorldUpdate(uint32 diffMs)
+    {
+        _worldUpdate.Record(diffMs);
+    }
+
+    void RuntimeMetrics::RecordMapUpdatePass(uint32 mapCount)
+    {
+        _mapUpdatePasses.Record(mapCount);
+    }
+
+    void RuntimeMetrics::RecordMapUpdateScheduled(uint32 pendingRequests)
+    {
+        _mapUpdateScheduled.fetch_add(1, std::memory_order_relaxed);
+        _mapUpdatePending.store(pendingRequests, std::memory_order_relaxed);
+        StoreMax(_mapUpdatePendingHighWater, pendingRequests);
+    }
+
+    void RuntimeMetrics::RecordMapUpdateCompleted(uint32 pendingRequests)
+    {
+        _mapUpdateCompleted.fetch_add(1, std::memory_order_relaxed);
+        _mapUpdatePending.store(pendingRequests, std::memory_order_relaxed);
+    }
+
+    void RuntimeMetrics::RecordMapUpdateScheduleFailed(uint32 pendingRequests)
+    {
+        _mapUpdateScheduleFailures.fetch_add(1, std::memory_order_relaxed);
+        _mapUpdatePending.store(pendingRequests, std::memory_order_relaxed);
+    }
+
+    void RuntimeMetrics::RecordMapUpdateWait(uint32 waitMs)
+    {
+        _mapUpdateWait.Record(waitMs);
+    }
+
+    RuntimeMetricsSnapshot RuntimeMetrics::Snapshot() const
+    {
+        RuntimeMetricsSnapshot snapshot;
+        snapshot.WorldUpdate = _worldUpdate.Snapshot();
+        snapshot.MapUpdatePasses = _mapUpdatePasses.Snapshot();
+        snapshot.MapUpdater.Scheduled = _mapUpdateScheduled.load(std::memory_order_relaxed);
+        snapshot.MapUpdater.Completed = _mapUpdateCompleted.load(std::memory_order_relaxed);
+        snapshot.MapUpdater.ScheduleFailures = _mapUpdateScheduleFailures.load(std::memory_order_relaxed);
+        snapshot.MapUpdater.Pending = _mapUpdatePending.load(std::memory_order_relaxed);
+        snapshot.MapUpdater.PendingHighWater = _mapUpdatePendingHighWater.load(std::memory_order_relaxed);
+        snapshot.MapUpdater.Wait = _mapUpdateWait.Snapshot();
+
+        return snapshot;
+    }
+
+    RuntimeMetrics& GetRuntimeMetrics()
+    {
+        static RuntimeMetrics metrics;
+        return metrics;
+    }
+
+    std::vector<std::string> FormatRuntimeMetricLines(RuntimeMetricsSnapshot const& snapshot)
+    {
+        std::vector<std::string> lines;
+        lines.reserve(2);
+
+        std::ostringstream worldLine;
+        worldLine << "Runtime metrics - World update: samples " << snapshot.WorldUpdate.SampleCount
+            << ", last " << snapshot.WorldUpdate.Last << " ms"
+            << ", avg " << snapshot.WorldUpdate.Average << " ms"
+            << ", max " << snapshot.WorldUpdate.Maximum << " ms";
+        lines.push_back(worldLine.str());
+
+        std::ostringstream mapLine;
+        mapLine << "Runtime metrics - Map updater: scheduled " << snapshot.MapUpdater.Scheduled
+            << ", completed " << snapshot.MapUpdater.Completed
+            << ", pending " << snapshot.MapUpdater.Pending
+            << ", high-water " << snapshot.MapUpdater.PendingHighWater
+            << ", failures " << snapshot.MapUpdater.ScheduleFailures
+            << ", waits " << snapshot.MapUpdater.Wait.SampleCount
+            << ", wait avg " << snapshot.MapUpdater.Wait.Average << " ms"
+            << ", wait max " << snapshot.MapUpdater.Wait.Maximum << " ms"
+            << ", map pass avg " << snapshot.MapUpdatePasses.Average
+            << ", map pass max " << snapshot.MapUpdatePasses.Maximum;
+        lines.push_back(mapLine.str());
+
+        return lines;
+    }
+}
+}

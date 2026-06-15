@@ -9,6 +9,7 @@
 #include "GridDefines.h"
 #include "MapLifecycle.h"
 #include "ObjectAccessorLifecycle.h"
+#include "RuntimeMetrics.h"
 #include "SpellCalculations.h"
 #include "SpellAuraMetadata.h"
 #include "SpellAuraDefines.h"
@@ -27,6 +28,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -1410,6 +1412,83 @@ namespace
 
         return passed;
     }
+
+    bool TestRuntimeMetricsRules()
+    {
+        bool passed = true;
+
+        Skyfire::Diagnostics::RuntimeMetrics metrics;
+
+        Skyfire::Diagnostics::RuntimeMetricsSnapshot emptySnapshot = metrics.Snapshot();
+        passed &= Expect(emptySnapshot.WorldUpdate.SampleCount == 0,
+            "Runtime metrics should start with no world update samples");
+
+        metrics.RecordWorldUpdate(12);
+        metrics.RecordWorldUpdate(28);
+
+        Skyfire::Diagnostics::RuntimeMetricsSnapshot worldSnapshot = metrics.Snapshot();
+        passed &= Expect(worldSnapshot.WorldUpdate.SampleCount == 2,
+            "Runtime metrics should count world update samples");
+        passed &= Expect(worldSnapshot.WorldUpdate.Last == 28,
+            "Runtime metrics should remember the latest world update diff");
+        passed &= Expect(worldSnapshot.WorldUpdate.Average == 20,
+            "Runtime metrics should average world update samples");
+        passed &= Expect(worldSnapshot.WorldUpdate.Maximum == 28,
+            "Runtime metrics should keep the maximum world update sample");
+
+        metrics.RecordMapUpdatePass(3);
+        metrics.RecordMapUpdatePass(5);
+        metrics.RecordMapUpdateScheduled(1);
+        metrics.RecordMapUpdateScheduled(2);
+        metrics.RecordMapUpdateCompleted(1);
+        metrics.RecordMapUpdateScheduleFailed(1);
+        metrics.RecordMapUpdateWait(7);
+        metrics.RecordMapUpdateWait(11);
+
+        Skyfire::Diagnostics::RuntimeMetricsSnapshot mapSnapshot = metrics.Snapshot();
+        passed &= Expect(mapSnapshot.MapUpdatePasses.SampleCount == 2,
+            "Runtime metrics should count map update passes");
+        passed &= Expect(mapSnapshot.MapUpdatePasses.Last == 5,
+            "Runtime metrics should remember the latest map update pass size");
+        passed &= Expect(mapSnapshot.MapUpdatePasses.Average == 4,
+            "Runtime metrics should average map update pass sizes");
+        passed &= Expect(mapSnapshot.MapUpdatePasses.Maximum == 5,
+            "Runtime metrics should keep the largest map update pass size");
+        passed &= Expect(mapSnapshot.MapUpdater.Scheduled == 2,
+            "Runtime metrics should count scheduled map updates");
+        passed &= Expect(mapSnapshot.MapUpdater.Completed == 1,
+            "Runtime metrics should count completed map updates");
+        passed &= Expect(mapSnapshot.MapUpdater.ScheduleFailures == 1,
+            "Runtime metrics should count failed map update schedules");
+        passed &= Expect(mapSnapshot.MapUpdater.Pending == 1,
+            "Runtime metrics should report current pending map updates");
+        passed &= Expect(mapSnapshot.MapUpdater.PendingHighWater == 2,
+            "Runtime metrics should keep pending map update high-water");
+        passed &= Expect(mapSnapshot.MapUpdater.Wait.SampleCount == 2,
+            "Runtime metrics should count map updater wait samples");
+        passed &= Expect(mapSnapshot.MapUpdater.Wait.Average == 9,
+            "Runtime metrics should average map updater wait samples");
+        passed &= Expect(mapSnapshot.MapUpdater.Wait.Maximum == 11,
+            "Runtime metrics should keep the largest map updater wait sample");
+
+        std::vector<std::string> lines = Skyfire::Diagnostics::FormatRuntimeMetricLines(mapSnapshot);
+        passed &= Expect(lines.size() == 2,
+            "Runtime metrics formatting should produce two server info lines");
+        passed &= Expect(lines[0].find("World update: samples 2") != std::string::npos,
+            "Runtime metrics world line should include sample count");
+        passed &= Expect(lines[1].find("Map updater: scheduled 2") != std::string::npos,
+            "Runtime metrics map line should include scheduled count");
+
+        metrics.Reset();
+
+        Skyfire::Diagnostics::RuntimeMetricsSnapshot resetSnapshot = metrics.Snapshot();
+        passed &= Expect(resetSnapshot.WorldUpdate.SampleCount == 0,
+            "Runtime metrics reset should clear world update samples");
+        passed &= Expect(resetSnapshot.MapUpdater.Pending == 0,
+            "Runtime metrics reset should clear pending map updates");
+
+        return passed;
+    }
 }
 
 int main()
@@ -1433,6 +1512,7 @@ int main()
     passed &= TestMapDelayedListLifecycleRules();
     passed &= TestObjectAccessorLifecycleRules();
     passed &= TestWorldShutdownLifecycleRules();
+    passed &= TestRuntimeMetricsRules();
 
     return passed ? 0 : 1;
 }

@@ -16,6 +16,7 @@ EndScriptData */
 #include "MemoryUsage.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
+#include "RuntimeMetrics.h"
 #include "ScriptMgr.h"
 #include "SystemConfig.h"
 
@@ -107,6 +108,10 @@ public:
         handler->PSendSysMessage(LANG_UPTIME, uptime.c_str());
         std::string memoryInfo = Skyfire::GetProcessMemoryUsage(memoryUsage) ? Skyfire::FormatProcessMemoryUsage(memoryUsage) : "unavailable";
         handler->PSendSysMessage("Memory: %s", memoryInfo.c_str());
+        std::vector<std::string> runtimeMetrics =
+            Skyfire::Diagnostics::FormatRuntimeMetricLines(Skyfire::Diagnostics::GetRuntimeMetrics().Snapshot());
+        for (std::vector<std::string>::const_iterator itr = runtimeMetrics.begin(); itr != runtimeMetrics.end(); ++itr)
+            handler->PSendSysMessage("%s", itr->c_str());
         handler->PSendSysMessage(LANG_UPDATE_DIFF, updateTime);
 
         // Can't use sWorld->ShutdownMsg here in case of console command

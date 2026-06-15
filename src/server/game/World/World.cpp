@@ -52,6 +52,7 @@
 #include "Platform/TimeUtils.h"
 #include "Player.h"
 #include "PoolMgr.h"
+#include "RuntimeMetrics.h"
 #include "ScriptMgr.h"
 #include "ScriptMgr.h"
 #include "SkillDiscovery.h"
@@ -2060,6 +2061,7 @@ void World::LoadAutobroadcasts()
 void World::Update(uint32 diff)
 {
     m_updateTime = diff;
+    Skyfire::Diagnostics::GetRuntimeMetrics().RecordWorldUpdate(diff);
 
     if (getIntConfig(WorldIntConfigs::CONFIG_INTERVAL_LOG_UPDATE) && diff > getIntConfig(WorldIntConfigs::CONFIG_MIN_LOG_UPDATE))
     {

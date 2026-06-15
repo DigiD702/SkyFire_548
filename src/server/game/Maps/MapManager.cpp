@@ -19,6 +19,7 @@
 #include "ObjectMgr.h"
 #include "Opcodes.h"
 #include "Player.h"
+#include "RuntimeMetrics.h"
 #include "Transport.h"
 #include "World.h"
 #include "WorldPacket.h"
@@ -289,6 +290,8 @@ void MapManager::Update(uint32 diff)
     i_timer.Update(diff);
     if (!i_timer.Passed())
         return;
+
+    Skyfire::Diagnostics::GetRuntimeMetrics().RecordMapUpdatePass(static_cast<uint32>(i_maps.size()));
 
     MapMapType::iterator iter = i_maps.begin();
     for (; iter != i_maps.end(); ++iter)

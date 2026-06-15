@@ -359,6 +359,7 @@ add_executable(game_domain_tests
   ${CMAKE_SOURCE_DIR}/src/server/game/Spells/SpellMovementMetadata.cpp
   ${CMAKE_SOURCE_DIR}/src/server/game/Spells/SpellSummonMetadata.cpp
   ${CMAKE_SOURCE_DIR}/src/server/game/Spells/SpellTargeting.cpp
+  ${CMAKE_SOURCE_DIR}/src/server/game/Diagnostics/RuntimeMetrics.cpp
   ${CMAKE_SOURCE_DIR}/src/server/game/Maps/MapLifecycle.cpp
   ${CMAKE_SOURCE_DIR}/src/server/game/Globals/ObjectAccessorLifecycle.cpp
   ${CMAKE_SOURCE_DIR}/src/server/worldserver/WorldThread/WorldShutdownLifecycle.cpp
@@ -391,6 +392,7 @@ target_include_directories(game_domain_tests PRIVATE
   ${CMAKE_SOURCE_DIR}/src/server/game/Combat
   ${CMAKE_SOURCE_DIR}/src/server/game/Conditions
   ${CMAKE_SOURCE_DIR}/src/server/game/DataStores
+  ${CMAKE_SOURCE_DIR}/src/server/game/Diagnostics
   ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Creature
   ${CMAKE_SOURCE_DIR}/src/server/game/Entities/GameObject
   ${CMAKE_SOURCE_DIR}/src/server/game/Entities/Item

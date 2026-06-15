@@ -19,6 +19,7 @@ file(GLOB_RECURSE sources_Cinematic Cinematic/*.cpp Cinematic/*.h)
 file(GLOB_RECURSE sources_Combat Combat/*.cpp Combat/*.h)
 file(GLOB_RECURSE sources_Conditions Conditions/*.cpp Conditions/*.h)
 file(GLOB_RECURSE sources_DataStores DataStores/*.cpp DataStores/*.h)
+file(GLOB_RECURSE sources_Diagnostics Diagnostics/*.cpp Diagnostics/*.h)
 file(GLOB_RECURSE sources_DungeonFinding DungeonFinding/*.cpp DungeonFinding/*.h)
 file(GLOB_RECURSE sources_Entities Entities/*.cpp Entities/*.h)
 file(GLOB_RECURSE sources_Events Events/*.cpp Events/*.h)
@@ -65,6 +66,7 @@ source_group(Cinematic FILES ${sources_Cinematic})
 source_group(Combat FILES ${sources_Combat})
 source_group(Conditions FILES ${sources_Conditions})
 source_group(DataStores FILES ${sources_DataStores})
+source_group(Diagnostics FILES ${sources_Diagnostics})
 source_group(DungeonFinding FILES ${sources_DungeonFinding})
 source_group(Entities FILES ${sources_Entities})
 source_group(Events FILES ${sources_Events})
@@ -118,6 +120,7 @@ set(game_STAT_SRCS
   ${sources_Combat}
   ${sources_Conditions}
   ${sources_DataStores}
+  ${sources_Diagnostics}
   ${sources_DungeonFinding}
   ${sources_Entities}
   ${sources_Events}
@@ -195,6 +198,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/Combat
   ${CMAKE_CURRENT_SOURCE_DIR}/Conditions
   ${CMAKE_CURRENT_SOURCE_DIR}/DataStores
+  ${CMAKE_CURRENT_SOURCE_DIR}/Diagnostics
   ${CMAKE_CURRENT_SOURCE_DIR}/DungeonFinding
   ${CMAKE_CURRENT_SOURCE_DIR}/Entities
   ${CMAKE_CURRENT_SOURCE_DIR}/Entities/AreaTrigger
