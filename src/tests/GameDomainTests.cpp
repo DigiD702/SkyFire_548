@@ -1487,15 +1487,32 @@ namespace
         passed &= Expect(packetSnapshot.WorldSession.QueueDepthHighWater == 3,
             "Runtime metrics should keep world session packet queue high-water");
 
-        std::vector<std::string> lines = Skyfire::Diagnostics::FormatRuntimeMetricLines(packetSnapshot);
-        passed &= Expect(lines.size() == 3,
-            "Runtime metrics formatting should produce three server info lines");
+        metrics.RecordSpellCastFailure(133, 24, 0, 1234);
+        metrics.RecordSpellCastFailure(116, 46, 7, 5678);
+
+        Skyfire::Diagnostics::RuntimeMetricsSnapshot spellSnapshot = metrics.Snapshot();
+        passed &= Expect(spellSnapshot.SpellCast.Failures == 2,
+            "Runtime metrics should count reported spell cast failures");
+        passed &= Expect(spellSnapshot.SpellCast.LastSpellId == 116,
+            "Runtime metrics should remember the latest failed spell id");
+        passed &= Expect(spellSnapshot.SpellCast.LastFailure == 46,
+            "Runtime metrics should remember the latest spell failure reason");
+        passed &= Expect(spellSnapshot.SpellCast.LastCustomError == 7,
+            "Runtime metrics should remember the latest spell custom error");
+        passed &= Expect(spellSnapshot.SpellCast.LastOpcode == 5678,
+            "Runtime metrics should remember the latest spell failure opcode");
+
+        std::vector<std::string> lines = Skyfire::Diagnostics::FormatRuntimeMetricLines(spellSnapshot);
+        passed &= Expect(lines.size() == 4,
+            "Runtime metrics formatting should produce four server info lines");
         passed &= Expect(lines[0].find("World update: samples 2") != std::string::npos,
             "Runtime metrics world line should include sample count");
         passed &= Expect(lines[1].find("Map updater: scheduled 2") != std::string::npos,
             "Runtime metrics map line should include scheduled count");
         passed &= Expect(lines[2].find("Packet queue: queued 3") != std::string::npos,
             "Runtime metrics packet line should include queued packet count");
+        passed &= Expect(lines[3].find("Spell cast failures: count 2") != std::string::npos,
+            "Runtime metrics spell line should include failure count");
 
         metrics.Reset();
 
@@ -1506,6 +1523,8 @@ namespace
             "Runtime metrics reset should clear pending map updates");
         passed &= Expect(resetSnapshot.WorldSession.QueueDepthHighWater == 0,
             "Runtime metrics reset should clear packet queue high-water");
+        passed &= Expect(resetSnapshot.SpellCast.Failures == 0,
+            "Runtime metrics reset should clear spell cast failure counts");
 
         return passed;
     }

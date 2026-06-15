@@ -32,8 +32,11 @@ namespace Diagnostics
     WorldSessionMetricsSnapshot::WorldSessionMetricsSnapshot()
         : PacketsQueued(0), PacketsProcessed(0), QueueDepth(0), QueueDepthHighWater(0) { }
 
+    SpellCastMetricsSnapshot::SpellCastMetricsSnapshot()
+        : Failures(0), LastSpellId(0), LastFailure(0), LastCustomError(0), LastOpcode(0) { }
+
     RuntimeMetricsSnapshot::RuntimeMetricsSnapshot()
-        : WorldUpdate(), MapUpdatePasses(), MapUpdater(), WorldSession() { }
+        : WorldUpdate(), MapUpdatePasses(), MapUpdater(), WorldSession(), SpellCast() { }
 
     RuntimeMetrics::RuntimeSample::RuntimeSample()
         : _sampleCount(0), _total(0), _last(0), _maximum(0) { }
@@ -79,7 +82,12 @@ namespace Diagnostics
           _worldSessionPacketsQueued(0),
           _worldSessionPacketsProcessed(0),
           _worldSessionQueueDepth(0),
-          _worldSessionQueueDepthHighWater(0) { }
+          _worldSessionQueueDepthHighWater(0),
+          _spellCastFailures(0),
+          _spellCastLastSpellId(0),
+          _spellCastLastFailure(0),
+          _spellCastLastCustomError(0),
+          _spellCastLastOpcode(0) { }
 
     void RuntimeMetrics::Reset()
     {
@@ -95,6 +103,11 @@ namespace Diagnostics
         _worldSessionPacketsProcessed.store(0, std::memory_order_relaxed);
         _worldSessionQueueDepth.store(0, std::memory_order_relaxed);
         _worldSessionQueueDepthHighWater.store(0, std::memory_order_relaxed);
+        _spellCastFailures.store(0, std::memory_order_relaxed);
+        _spellCastLastSpellId.store(0, std::memory_order_relaxed);
+        _spellCastLastFailure.store(0, std::memory_order_relaxed);
+        _spellCastLastCustomError.store(0, std::memory_order_relaxed);
+        _spellCastLastOpcode.store(0, std::memory_order_relaxed);
     }
 
     void RuntimeMetrics::RecordWorldUpdate(uint32 diffMs)
@@ -144,6 +157,15 @@ namespace Diagnostics
         _worldSessionQueueDepth.store(queueDepth, std::memory_order_relaxed);
     }
 
+    void RuntimeMetrics::RecordSpellCastFailure(uint32 spellId, uint32 failure, uint32 customError, uint32 opcode)
+    {
+        _spellCastFailures.fetch_add(1, std::memory_order_relaxed);
+        _spellCastLastSpellId.store(spellId, std::memory_order_relaxed);
+        _spellCastLastFailure.store(failure, std::memory_order_relaxed);
+        _spellCastLastCustomError.store(customError, std::memory_order_relaxed);
+        _spellCastLastOpcode.store(opcode, std::memory_order_relaxed);
+    }
+
     RuntimeMetricsSnapshot RuntimeMetrics::Snapshot() const
     {
         RuntimeMetricsSnapshot snapshot;
@@ -159,6 +181,11 @@ namespace Diagnostics
         snapshot.WorldSession.PacketsProcessed = _worldSessionPacketsProcessed.load(std::memory_order_relaxed);
         snapshot.WorldSession.QueueDepth = _worldSessionQueueDepth.load(std::memory_order_relaxed);
         snapshot.WorldSession.QueueDepthHighWater = _worldSessionQueueDepthHighWater.load(std::memory_order_relaxed);
+        snapshot.SpellCast.Failures = _spellCastFailures.load(std::memory_order_relaxed);
+        snapshot.SpellCast.LastSpellId = _spellCastLastSpellId.load(std::memory_order_relaxed);
+        snapshot.SpellCast.LastFailure = _spellCastLastFailure.load(std::memory_order_relaxed);
+        snapshot.SpellCast.LastCustomError = _spellCastLastCustomError.load(std::memory_order_relaxed);
+        snapshot.SpellCast.LastOpcode = _spellCastLastOpcode.load(std::memory_order_relaxed);
 
         return snapshot;
     }
@@ -172,7 +199,7 @@ namespace Diagnostics
     std::vector<std::string> FormatRuntimeMetricLines(RuntimeMetricsSnapshot const& snapshot)
     {
         std::vector<std::string> lines;
-        lines.reserve(3);
+        lines.reserve(4);
 
         std::ostringstream worldLine;
         worldLine << "Runtime metrics - World update: samples " << snapshot.WorldUpdate.SampleCount
@@ -200,6 +227,14 @@ namespace Diagnostics
             << ", depth " << snapshot.WorldSession.QueueDepth
             << ", high-water " << snapshot.WorldSession.QueueDepthHighWater;
         lines.push_back(packetLine.str());
+
+        std::ostringstream spellLine;
+        spellLine << "Runtime metrics - Spell cast failures: count " << snapshot.SpellCast.Failures
+            << ", last spell " << snapshot.SpellCast.LastSpellId
+            << ", result " << snapshot.SpellCast.LastFailure
+            << ", custom " << snapshot.SpellCast.LastCustomError
+            << ", opcode " << snapshot.SpellCast.LastOpcode;
+        lines.push_back(spellLine.str());
 
         return lines;
     }

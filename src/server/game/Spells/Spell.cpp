@@ -26,6 +26,7 @@
 #include "Opcodes.h"
 #include "Pet.h"
 #include "Player.h"
+#include "RuntimeMetrics.h"
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
 #include "Spell.h"
@@ -3873,6 +3874,12 @@ void Spell::SendCastResult(Player* caster, SpellInfo const* spellInfo, uint8 cas
 {
     if (result == SpellCastResult::SPELL_CAST_OK)
         return;
+
+    Skyfire::Diagnostics::GetRuntimeMetrics().RecordSpellCastFailure(
+        spellInfo ? spellInfo->Id : 0,
+        static_cast<uint32>(result),
+        static_cast<uint32>(customError),
+        static_cast<uint32>(opcode));
 
     WorldPacket data(opcode, (4 + 1 + 1));
     data << uint32(spellInfo->Id);

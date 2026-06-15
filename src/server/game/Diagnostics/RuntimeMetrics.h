@@ -48,6 +48,17 @@ namespace Diagnostics
         uint32 QueueDepthHighWater;
     };
 
+    struct SpellCastMetricsSnapshot
+    {
+        SpellCastMetricsSnapshot();
+
+        uint64 Failures;
+        uint32 LastSpellId;
+        uint32 LastFailure;
+        uint32 LastCustomError;
+        uint32 LastOpcode;
+    };
+
     struct RuntimeMetricsSnapshot
     {
         RuntimeMetricsSnapshot();
@@ -56,6 +67,7 @@ namespace Diagnostics
         RuntimeSampleSnapshot MapUpdatePasses;
         MapUpdaterMetricsSnapshot MapUpdater;
         WorldSessionMetricsSnapshot WorldSession;
+        SpellCastMetricsSnapshot SpellCast;
     };
 
     class RuntimeMetrics
@@ -73,6 +85,7 @@ namespace Diagnostics
         void RecordMapUpdateWait(uint32 waitMs);
         void RecordWorldSessionPacketQueued(uint32 queueDepth);
         void RecordWorldSessionPacketProcessed(uint32 queueDepth);
+        void RecordSpellCastFailure(uint32 spellId, uint32 failure, uint32 customError, uint32 opcode);
 
         RuntimeMetricsSnapshot Snapshot() const;
 
@@ -105,6 +118,11 @@ namespace Diagnostics
         std::atomic<uint64> _worldSessionPacketsProcessed;
         std::atomic<uint32> _worldSessionQueueDepth;
         std::atomic<uint32> _worldSessionQueueDepthHighWater;
+        std::atomic<uint64> _spellCastFailures;
+        std::atomic<uint32> _spellCastLastSpellId;
+        std::atomic<uint32> _spellCastLastFailure;
+        std::atomic<uint32> _spellCastLastCustomError;
+        std::atomic<uint32> _spellCastLastOpcode;
     };
 
     RuntimeMetrics& GetRuntimeMetrics();
