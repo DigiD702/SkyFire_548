@@ -9,6 +9,7 @@
 #include "Common.h"
 #include "GridReference.h"
 #include "Map.h"
+#include "MapObjectCellMoveState.h"
 #include "ObjectDefines.h"
 #include "UpdateMask.h"
 
@@ -581,13 +582,6 @@ public:
 private:
     T_VALUES m_values[ARRAY_SIZE];
     T_FLAGS m_flags;
-};
-
-enum class MapObjectCellMoveState
-{
-    MAP_OBJECT_CELL_MOVE_NONE, //not in move list
-    MAP_OBJECT_CELL_MOVE_ACTIVE, //in move list
-    MAP_OBJECT_CELL_MOVE_INACTIVE, //in move list but should not move
 };
 
 class MapObject

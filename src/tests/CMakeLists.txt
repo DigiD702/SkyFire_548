@@ -359,6 +359,9 @@ add_executable(game_domain_tests
   ${CMAKE_SOURCE_DIR}/src/server/game/Spells/SpellMovementMetadata.cpp
   ${CMAKE_SOURCE_DIR}/src/server/game/Spells/SpellSummonMetadata.cpp
   ${CMAKE_SOURCE_DIR}/src/server/game/Spells/SpellTargeting.cpp
+  ${CMAKE_SOURCE_DIR}/src/server/game/Maps/MapLifecycle.cpp
+  ${CMAKE_SOURCE_DIR}/src/server/game/Globals/ObjectAccessorLifecycle.cpp
+  ${CMAKE_SOURCE_DIR}/src/server/worldserver/WorldThread/WorldShutdownLifecycle.cpp
   GameDomainTestSupport.cpp
   GameDomainTests.cpp
 )
@@ -421,6 +424,7 @@ target_include_directories(game_domain_tests PRIVATE
   ${CMAKE_SOURCE_DIR}/src/server/game/Spells/Auras
   ${CMAKE_SOURCE_DIR}/src/server/game/Tools
   ${CMAKE_SOURCE_DIR}/src/server/game/World
+  ${CMAKE_SOURCE_DIR}/src/server/worldserver/WorldThread
   ${Boost_INCLUDE_DIRS}
 )
 

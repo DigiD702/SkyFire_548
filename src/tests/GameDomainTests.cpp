@@ -7,6 +7,8 @@
 #include "CurrencyFormulas.h"
 #include "DBCEnums.h"
 #include "GridDefines.h"
+#include "MapLifecycle.h"
+#include "ObjectAccessorLifecycle.h"
 #include "SpellCalculations.h"
 #include "SpellAuraMetadata.h"
 #include "SpellAuraDefines.h"
@@ -18,6 +20,7 @@
 #include "SpellTargeting.h"
 #include "SpellValidation.h"
 #include "ThreatCalcHelper.h"
+#include "WorldShutdownLifecycle.h"
 #include "WorldPacket.h"
 
 #include <cmath>
@@ -1188,6 +1191,225 @@ namespace
 
         return passed;
     }
+
+    bool TestMapMoveQueueLifecycleRules()
+    {
+        bool passed = true;
+
+        using Skyfire::Maps::MAP_MOVE_QUEUE_ADD_APPEND;
+        using Skyfire::Maps::MAP_MOVE_QUEUE_ADD_REFRESH;
+        using Skyfire::Maps::MAP_MOVE_QUEUE_ADD_SKIPPED_LOCKED;
+        using Skyfire::Maps::MAP_MOVE_QUEUE_REMOVE_ALREADY_CLEAR;
+        using Skyfire::Maps::MAP_MOVE_QUEUE_REMOVE_MARK_INACTIVE;
+        using Skyfire::Maps::MAP_MOVE_QUEUE_REMOVE_SKIPPED_LOCKED;
+
+        passed &= Expect(Skyfire::Maps::GetMoveQueueAddAction(MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE, false) ==
+            MAP_MOVE_QUEUE_ADD_APPEND,
+            "Objects that are not queued should be appended to the map move queue");
+        passed &= Expect(Skyfire::Maps::GetMoveQueueAddAction(MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_ACTIVE, false) ==
+            MAP_MOVE_QUEUE_ADD_REFRESH,
+            "Objects already queued for movement should refresh their target position without duplicating the queue entry");
+        passed &= Expect(Skyfire::Maps::GetMoveQueueAddAction(MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_INACTIVE, false) ==
+            MAP_MOVE_QUEUE_ADD_REFRESH,
+            "Inactive queued objects should be reactivated without duplicating the queue entry");
+        passed &= Expect(Skyfire::Maps::GetMoveQueueAddAction(MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE, true) ==
+            MAP_MOVE_QUEUE_ADD_SKIPPED_LOCKED,
+            "Move queue additions during queue drain should be skipped");
+
+        MapObjectCellMoveState state = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_ACTIVE;
+        passed &= Expect(Skyfire::Maps::MarkMoveQueueEntryInactive(state, false) == MAP_MOVE_QUEUE_REMOVE_MARK_INACTIVE,
+            "Active queued objects should be marked inactive when removed before queue drain");
+        passed &= Expect(state == MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_INACTIVE,
+            "Removing an active queued object should leave an inactive queue marker");
+
+        state = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE;
+        passed &= Expect(Skyfire::Maps::MarkMoveQueueEntryInactive(state, false) == MAP_MOVE_QUEUE_REMOVE_ALREADY_CLEAR,
+            "Objects outside the move queue should not change when removed from the queue");
+        passed &= Expect(state == MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE,
+            "Removing an object outside the move queue should keep the queue state clear");
+
+        state = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_ACTIVE;
+        passed &= Expect(Skyfire::Maps::MarkMoveQueueEntryInactive(state, true) == MAP_MOVE_QUEUE_REMOVE_SKIPPED_LOCKED,
+            "Move queue removals during queue drain should be skipped");
+        passed &= Expect(state == MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_ACTIVE,
+            "Skipped removals during queue drain should preserve the active state");
+
+        state = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_ACTIVE;
+        passed &= Expect(Skyfire::Maps::ConsumeMoveQueueEntry(state),
+            "Active queued objects should be consumed for relocation");
+        passed &= Expect(state == MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE,
+            "Consumed active queue entries should reset to the clear state");
+
+        state = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_INACTIVE;
+        passed &= Expect(!Skyfire::Maps::ConsumeMoveQueueEntry(state),
+            "Inactive queued objects should be skipped during queue drain");
+        passed &= Expect(state == MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE,
+            "Consumed inactive queue entries should reset to the clear state");
+
+        return passed;
+    }
+
+    bool TestMapDelayedListLifecycleRules()
+    {
+        bool passed = true;
+
+        using Skyfire::Maps::MAP_ADD_OBJECT_ADD_TO_GRID;
+        using Skyfire::Maps::MAP_ADD_OBJECT_REFRESH_EXISTING;
+        using Skyfire::Maps::MAP_ADD_OBJECT_REJECT_INVALID_COORDS;
+        using Skyfire::Maps::MAP_REMOVE_LIST_ADD_ALREADY_QUEUED;
+        using Skyfire::Maps::MAP_REMOVE_LIST_ADD_INSERT;
+        using Skyfire::Maps::MAP_SWITCH_LIST_ERASE_OPPOSITE;
+        using Skyfire::Maps::MAP_SWITCH_LIST_IGNORE_UNSUPPORTED_TYPE;
+        using Skyfire::Maps::MAP_SWITCH_LIST_INSERT;
+        using Skyfire::Maps::MAP_SWITCH_LIST_REJECT_DUPLICATE;
+
+        passed &= Expect(Skyfire::Maps::GetAddObjectAction(true, true) == MAP_ADD_OBJECT_REFRESH_EXISTING,
+            "Objects already in world should preserve the legacy AddToMap visibility-refresh path");
+        passed &= Expect(Skyfire::Maps::GetAddObjectAction(false, false) == MAP_ADD_OBJECT_REJECT_INVALID_COORDS,
+            "Objects outside valid map coordinates should be rejected before grid insertion");
+        passed &= Expect(Skyfire::Maps::GetAddObjectAction(false, true) == MAP_ADD_OBJECT_ADD_TO_GRID,
+            "Fresh objects with valid coordinates should be added to the map grid");
+
+        passed &= Expect(Skyfire::Maps::GetRemoveListAddAction(false) == MAP_REMOVE_LIST_ADD_INSERT,
+            "Objects not already queued for delayed removal should be inserted into the remove list");
+        passed &= Expect(Skyfire::Maps::GetRemoveListAddAction(true) == MAP_REMOVE_LIST_ADD_ALREADY_QUEUED,
+            "Objects already queued for delayed removal should be classified as duplicate remove-list entries");
+
+        passed &= Expect(Skyfire::Maps::GetSwitchListAction(false, false, false, true) ==
+            MAP_SWITCH_LIST_IGNORE_UNSUPPORTED_TYPE,
+            "Unsupported object types should be ignored by the delayed switch list");
+        passed &= Expect(Skyfire::Maps::GetSwitchListAction(true, false, false, true) ==
+            MAP_SWITCH_LIST_INSERT,
+            "Supported objects missing from the switch list should be inserted");
+        passed &= Expect(Skyfire::Maps::GetSwitchListAction(true, true, true, false) ==
+            MAP_SWITCH_LIST_ERASE_OPPOSITE,
+            "Opposite switch-list requests should cancel the existing queued transition");
+        passed &= Expect(Skyfire::Maps::GetSwitchListAction(true, true, false, true) ==
+            MAP_SWITCH_LIST_ERASE_OPPOSITE,
+            "Opposite switch-list requests should cancel queued off-to-on transitions");
+        passed &= Expect(Skyfire::Maps::GetSwitchListAction(true, true, true, true) ==
+            MAP_SWITCH_LIST_REJECT_DUPLICATE,
+            "Duplicate switch-list requests should be rejected as an invariant violation");
+
+        return passed;
+    }
+
+    bool TestObjectAccessorLifecycleRules()
+    {
+        bool passed = true;
+
+        using Skyfire::ObjectAccess::OBJECT_UPDATE_QUEUE_ADD_ALREADY_PRESENT;
+        using Skyfire::ObjectAccess::OBJECT_UPDATE_QUEUE_ADD_INSERT;
+        using Skyfire::ObjectAccess::OBJECT_UPDATE_QUEUE_REMOVE_ERASE;
+        using Skyfire::ObjectAccess::OBJECT_UPDATE_QUEUE_REMOVE_MISSING;
+        using Skyfire::ObjectAccess::OBJECT_UPDATE_QUEUE_DRAIN_EMPTY;
+        using Skyfire::ObjectAccess::OBJECT_UPDATE_QUEUE_DRAIN_POP;
+        using Skyfire::ObjectAccess::OBJECT_CORPSE_OWNER_ADD_ALREADY_MAPPED;
+        using Skyfire::ObjectAccess::OBJECT_CORPSE_OWNER_ADD_INSERT;
+        using Skyfire::ObjectAccess::OBJECT_CORPSE_OWNER_REMOVE_ERASE;
+        using Skyfire::ObjectAccess::OBJECT_CORPSE_OWNER_REMOVE_MISSING;
+        using Skyfire::ObjectAccess::OBJECT_CORPSE_STORAGE_UNLOAD_DRAIN;
+        using Skyfire::ObjectAccess::OBJECT_CORPSE_STORAGE_UNLOAD_EMPTY;
+
+        passed &= Expect(Skyfire::ObjectAccess::GetUpdateObjectQueueAddAction(false) ==
+            OBJECT_UPDATE_QUEUE_ADD_INSERT,
+            "ObjectAccessor should insert objects that are not already queued for update");
+        passed &= Expect(Skyfire::ObjectAccess::GetUpdateObjectQueueAddAction(true) ==
+            OBJECT_UPDATE_QUEUE_ADD_ALREADY_PRESENT,
+            "ObjectAccessor should treat duplicate update-object adds as a no-op");
+
+        passed &= Expect(Skyfire::ObjectAccess::GetUpdateObjectQueueRemoveAction(true) ==
+            OBJECT_UPDATE_QUEUE_REMOVE_ERASE,
+            "ObjectAccessor should erase objects that are present in the update queue");
+        passed &= Expect(Skyfire::ObjectAccess::GetUpdateObjectQueueRemoveAction(false) ==
+            OBJECT_UPDATE_QUEUE_REMOVE_MISSING,
+            "ObjectAccessor should treat missing update-object removes as a no-op");
+
+        passed &= Expect(Skyfire::ObjectAccess::CanBuildUpdateForQueuedObject(true, true),
+            "Queued update objects should be buildable only when the object exists and is in world");
+        passed &= Expect(!Skyfire::ObjectAccess::CanBuildUpdateForQueuedObject(false, true),
+            "ObjectAccessor should not build an update for a missing queued object");
+        passed &= Expect(!Skyfire::ObjectAccess::CanBuildUpdateForQueuedObject(true, false),
+            "ObjectAccessor should not build an update for an object that is out of world");
+
+        passed &= Expect(Skyfire::ObjectAccess::GetUpdateObjectQueueDrainAction(false) ==
+            OBJECT_UPDATE_QUEUE_DRAIN_POP,
+            "ObjectAccessor should pop one queued update object while the queue is not empty");
+        passed &= Expect(Skyfire::ObjectAccess::GetUpdateObjectQueueDrainAction(true) ==
+            OBJECT_UPDATE_QUEUE_DRAIN_EMPTY,
+            "ObjectAccessor should stop draining update objects when the queue is empty");
+
+        passed &= Expect(Skyfire::ObjectAccess::GetCorpseOwnerMappingRemoveAction(true) ==
+            OBJECT_CORPSE_OWNER_REMOVE_ERASE,
+            "ObjectAccessor should erase tracked corpse owner mappings");
+        passed &= Expect(Skyfire::ObjectAccess::GetCorpseOwnerMappingRemoveAction(false) ==
+            OBJECT_CORPSE_OWNER_REMOVE_MISSING,
+            "ObjectAccessor should classify missing corpse owner mappings for diagnostics");
+
+        passed &= Expect(Skyfire::ObjectAccess::GetCorpseOwnerMappingAddAction(false) ==
+            OBJECT_CORPSE_OWNER_ADD_INSERT,
+            "ObjectAccessor should insert corpse owner mappings that are not already tracked");
+        passed &= Expect(Skyfire::ObjectAccess::GetCorpseOwnerMappingAddAction(true) ==
+            OBJECT_CORPSE_OWNER_ADD_ALREADY_MAPPED,
+            "ObjectAccessor should classify duplicate corpse owner mappings as an invariant violation");
+
+        passed &= Expect(Skyfire::ObjectAccess::GetCorpseStorageUnloadAction(false) ==
+            OBJECT_CORPSE_STORAGE_UNLOAD_DRAIN,
+            "ObjectAccessor shutdown should drain corpse storage when tracked corpses remain");
+        passed &= Expect(Skyfire::ObjectAccess::GetCorpseStorageUnloadAction(true) ==
+            OBJECT_CORPSE_STORAGE_UNLOAD_EMPTY,
+            "ObjectAccessor shutdown should skip corpse storage drain when storage is empty");
+
+        return passed;
+    }
+
+    bool TestWorldShutdownLifecycleRules()
+    {
+        bool passed = true;
+
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_START;
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_SCRIPT_SHUTDOWN;
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_KICK_PLAYERS;
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_UPDATE_SESSIONS;
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_DELETE_BATTLEGROUNDS;
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_STOP_NETWORK;
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_UNLOAD_MAPS;
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_UNLOAD_OBJECT_ACCESSOR;
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_UNLOAD_SCRIPTS;
+        using Skyfire::WorldShutdown::WORLD_SHUTDOWN_OUTDOOR_PVP_DIE;
+
+        passed &= Expect(Skyfire::WorldShutdown::IsExpectedShutdownTransition(WORLD_SHUTDOWN_START, WORLD_SHUTDOWN_SCRIPT_SHUTDOWN),
+            "World shutdown should begin with script shutdown hooks");
+        passed &= Expect(Skyfire::WorldShutdown::IsExpectedShutdownTransition(WORLD_SHUTDOWN_KICK_PLAYERS, WORLD_SHUTDOWN_UPDATE_SESSIONS),
+            "World shutdown should update sessions immediately after kicking players");
+        passed &= Expect(Skyfire::WorldShutdown::IsExpectedShutdownTransition(WORLD_SHUTDOWN_STOP_NETWORK, WORLD_SHUTDOWN_UNLOAD_MAPS),
+            "World shutdown should stop the network before unloading maps");
+        passed &= Expect(Skyfire::WorldShutdown::IsExpectedShutdownTransition(WORLD_SHUTDOWN_UNLOAD_MAPS, WORLD_SHUTDOWN_UNLOAD_OBJECT_ACCESSOR),
+            "World shutdown should unload maps before ObjectAccessor corpse storage");
+
+        passed &= Expect(!Skyfire::WorldShutdown::IsExpectedShutdownTransition(WORLD_SHUTDOWN_START, WORLD_SHUTDOWN_UNLOAD_MAPS),
+            "World shutdown should reject jumping directly from start to map unload");
+        passed &= Expect(!Skyfire::WorldShutdown::IsExpectedShutdownTransition(WORLD_SHUTDOWN_UNLOAD_OBJECT_ACCESSOR, WORLD_SHUTDOWN_UNLOAD_MAPS),
+            "World shutdown should reject unloading maps after ObjectAccessor teardown");
+
+        passed &= Expect(Skyfire::WorldShutdown::IsShutdownStepBefore(WORLD_SHUTDOWN_KICK_PLAYERS, WORLD_SHUTDOWN_UPDATE_SESSIONS),
+            "KickAll must happen before the session update pass");
+        passed &= Expect(Skyfire::WorldShutdown::IsShutdownStepBefore(WORLD_SHUTDOWN_UPDATE_SESSIONS, WORLD_SHUTDOWN_UNLOAD_MAPS),
+            "The session update pass must happen before map unload");
+        passed &= Expect(Skyfire::WorldShutdown::IsShutdownStepBefore(WORLD_SHUTDOWN_UNLOAD_MAPS, WORLD_SHUTDOWN_UNLOAD_OBJECT_ACCESSOR),
+            "Map unload must happen before ObjectAccessor unload");
+        passed &= Expect(!Skyfire::WorldShutdown::IsShutdownStepBefore(WORLD_SHUTDOWN_UNLOAD_SCRIPTS, WORLD_SHUTDOWN_DELETE_BATTLEGROUNDS),
+            "Script unload should not be classified before battleground deletion");
+
+        passed &= Expect(Skyfire::WorldShutdown::GetShutdownStepName(WORLD_SHUTDOWN_DELETE_BATTLEGROUNDS) ==
+            std::string("delete battlegrounds"),
+            "Shutdown lifecycle steps should have stable diagnostics labels");
+        passed &= Expect(Skyfire::WorldShutdown::GetShutdownStepName(WORLD_SHUTDOWN_OUTDOOR_PVP_DIE) ==
+            std::string("outdoor pvp cleanup"),
+            "Final shutdown lifecycle step should have a stable diagnostics label");
+
+        return passed;
+    }
 }
 
 int main()
@@ -1207,6 +1429,10 @@ int main()
     passed &= TestSpellEffectMetadataRules();
     passed &= TestSpellSummonMetadataRules();
     passed &= TestGridAndCellPrimitives();
+    passed &= TestMapMoveQueueLifecycleRules();
+    passed &= TestMapDelayedListLifecycleRules();
+    passed &= TestObjectAccessorLifecycleRules();
+    passed &= TestWorldShutdownLifecycleRules();
 
     return passed ? 0 : 1;
 }
