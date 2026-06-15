@@ -38,6 +38,16 @@ namespace Diagnostics
         RuntimeSampleSnapshot Wait;
     };
 
+    struct WorldSessionMetricsSnapshot
+    {
+        WorldSessionMetricsSnapshot();
+
+        uint64 PacketsQueued;
+        uint64 PacketsProcessed;
+        uint32 QueueDepth;
+        uint32 QueueDepthHighWater;
+    };
+
     struct RuntimeMetricsSnapshot
     {
         RuntimeMetricsSnapshot();
@@ -45,6 +55,7 @@ namespace Diagnostics
         RuntimeSampleSnapshot WorldUpdate;
         RuntimeSampleSnapshot MapUpdatePasses;
         MapUpdaterMetricsSnapshot MapUpdater;
+        WorldSessionMetricsSnapshot WorldSession;
     };
 
     class RuntimeMetrics
@@ -60,6 +71,8 @@ namespace Diagnostics
         void RecordMapUpdateCompleted(uint32 pendingRequests);
         void RecordMapUpdateScheduleFailed(uint32 pendingRequests);
         void RecordMapUpdateWait(uint32 waitMs);
+        void RecordWorldSessionPacketQueued(uint32 queueDepth);
+        void RecordWorldSessionPacketProcessed(uint32 queueDepth);
 
         RuntimeMetricsSnapshot Snapshot() const;
 
@@ -88,6 +101,10 @@ namespace Diagnostics
         std::atomic<uint64> _mapUpdateScheduleFailures;
         std::atomic<uint32> _mapUpdatePending;
         std::atomic<uint32> _mapUpdatePendingHighWater;
+        std::atomic<uint64> _worldSessionPacketsQueued;
+        std::atomic<uint64> _worldSessionPacketsProcessed;
+        std::atomic<uint32> _worldSessionQueueDepth;
+        std::atomic<uint32> _worldSessionQueueDepthHighWater;
     };
 
     RuntimeMetrics& GetRuntimeMetrics();

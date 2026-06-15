@@ -9,6 +9,7 @@
 #include "Debugging/Errors.h"
 #include "Platform/Threading.h"
 #include <assert.h>
+#include <cstddef>
 #include <deque>
 #include <mutex>
 
@@ -34,16 +35,16 @@ namespace Skyfire
         virtual ~LockedQueue() { }
 
         //! Adds an item to the queue.
-        void add(const T& item)
+        std::size_t add(const T& item)
         {
-            lock();
+            std::lock_guard<LockType> g(this->_lock);
 
             //ASSERT(!this->_canceled);
             // throw Cancellation_Exception();
 
             _queue.push_back(item);
 
-            unlock();
+            return _queue.size();
         }
 
         //! Gets the next result in the queue, if any.
@@ -132,6 +133,13 @@ namespace Skyfire
         {
             std::lock_guard<LockType> g(this->_lock);
             return _queue.empty();
+        }
+
+        ///! Returns current queue depth with locks held
+        std::size_t size()
+        {
+            std::lock_guard<LockType> g(this->_lock);
+            return _queue.size();
         }
     };
 }

@@ -14,6 +14,7 @@ EndScriptData */
 #include "Config.h"
 #include "Language.h"
 #include "MemoryUsage.h"
+#include "MapManager.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
 #include "RuntimeMetrics.h"
@@ -112,6 +113,11 @@ public:
             Skyfire::Diagnostics::FormatRuntimeMetricLines(Skyfire::Diagnostics::GetRuntimeMetrics().Snapshot());
         for (std::vector<std::string>::const_iterator itr = runtimeMetrics.begin(); itr != runtimeMetrics.end(); ++itr)
             handler->PSendSysMessage("%s", itr->c_str());
+        DelayExecutorMetricsSnapshot delayExecutorMetrics = sMapMgr->GetMapUpdater()->GetExecutorMetricsSnapshot();
+        handler->PSendSysMessage("Runtime metrics - Delay executor: submitted " UI64FMTD ", completed " UI64FMTD
+            ", rejected " UI64FMTD ", backlog %u, high-water %u",
+            delayExecutorMetrics.Submitted, delayExecutorMetrics.Completed, delayExecutorMetrics.Rejected,
+            delayExecutorMetrics.Backlog, delayExecutorMetrics.BacklogHighWater);
         handler->PSendSysMessage(LANG_UPDATE_DIFF, updateTime);
 
         // Can't use sWorld->ShutdownMsg here in case of console command

@@ -23,6 +23,7 @@
 #include "Opcodes.h"
 #include "OutdoorPvPMgr.h"
 #include "Player.h"
+#include "RuntimeMetrics.h"
 #include "ScriptMgr.h"
 #include "SocialMgr.h"
 #include "Transport.h"
@@ -266,7 +267,8 @@ void WorldSession::SendPacket(WorldPacket const* packet, bool forced /*= false*/
 /// Add an incoming packet to the queue
 void WorldSession::QueuePacket(WorldPacket* new_packet)
 {
-    _recvQueue.add(new_packet);
+    std::size_t const packetQueueDepth = _recvQueue.add(new_packet);
+    Skyfire::Diagnostics::GetRuntimeMetrics().RecordWorldSessionPacketQueued(static_cast<uint32>(packetQueueDepth));
 }
 
 /// Logging helper for unexpected opcodes
@@ -417,6 +419,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
 
 #define MAX_PROCESSED_PACKETS_IN_SAME_WORLDSESSION_UPDATE 100
         processedPackets++;
+        Skyfire::Diagnostics::GetRuntimeMetrics().RecordWorldSessionPacketProcessed(static_cast<uint32>(_recvQueue.size()));
 
         //process only a max amout of packets in 1 Update() call.
         //Any leftover will be processed in next update

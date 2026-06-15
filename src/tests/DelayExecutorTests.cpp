@@ -73,6 +73,13 @@ int main()
         return 1;
     }
 
+    DelayExecutorMetricsSnapshot rejectedBeforeStart = executor.GetMetricsSnapshot();
+    if (rejectedBeforeStart.Rejected != 1)
+    {
+        std::cerr << "DelayExecutor did not count rejected work before start\n";
+        return 1;
+    }
+
     int preHookCalls = 0;
     int postHookCalls = 0;
     std::mutex hookLock;
@@ -103,9 +110,23 @@ int main()
         return 1;
     }
 
+    DelayExecutorMetricsSnapshot submittedAfterStart = executor.GetMetricsSnapshot();
+    if (submittedAfterStart.Submitted != 1 || submittedAfterStart.BacklogHighWater == 0)
+    {
+        std::cerr << "DelayExecutor did not count submitted work or backlog after start\n";
+        return 1;
+    }
+
     if (!WaitForCount(executed, 1, executedLock, executedChanged))
     {
         std::cerr << "DelayExecutor did not execute queued work\n";
+        return 1;
+    }
+
+    DelayExecutorMetricsSnapshot completedAfterRun = executor.GetMetricsSnapshot();
+    if (completedAfterRun.Completed != 1 || completedAfterRun.Backlog != 0 || completedAfterRun.BacklogHighWater != 1)
+    {
+        std::cerr << "DelayExecutor did not count completed work and backlog drain\n";
         return 1;
     }
 
@@ -139,6 +160,13 @@ int main()
         return 1;
     }
 
+    DelayExecutorMetricsSnapshot rejectedAfterStop = executor.GetMetricsSnapshot();
+    if (rejectedAfterStop.Rejected != 2)
+    {
+        std::cerr << "DelayExecutor did not count rejected work after deactivate\n";
+        return 1;
+    }
+
     if (executor.start(1) != 0)
     {
         std::cerr << "DelayExecutor did not restart\n";
@@ -154,6 +182,13 @@ int main()
     if (!WaitForCount(executed, 2, executedLock, executedChanged))
     {
         std::cerr << "DelayExecutor did not execute work after restart\n";
+        return 1;
+    }
+
+    DelayExecutorMetricsSnapshot completedAfterRestart = executor.GetMetricsSnapshot();
+    if (completedAfterRestart.Submitted != 2 || completedAfterRestart.Completed != 2 || completedAfterRestart.Backlog != 0)
+    {
+        std::cerr << "DelayExecutor did not keep cumulative counters after restart\n";
         return 1;
     }
 

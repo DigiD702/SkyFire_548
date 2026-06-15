@@ -29,8 +29,11 @@ namespace Diagnostics
     MapUpdaterMetricsSnapshot::MapUpdaterMetricsSnapshot()
         : Scheduled(0), Completed(0), ScheduleFailures(0), Pending(0), PendingHighWater(0), Wait() { }
 
+    WorldSessionMetricsSnapshot::WorldSessionMetricsSnapshot()
+        : PacketsQueued(0), PacketsProcessed(0), QueueDepth(0), QueueDepthHighWater(0) { }
+
     RuntimeMetricsSnapshot::RuntimeMetricsSnapshot()
-        : WorldUpdate(), MapUpdatePasses(), MapUpdater() { }
+        : WorldUpdate(), MapUpdatePasses(), MapUpdater(), WorldSession() { }
 
     RuntimeMetrics::RuntimeSample::RuntimeSample()
         : _sampleCount(0), _total(0), _last(0), _maximum(0) { }
@@ -72,7 +75,11 @@ namespace Diagnostics
           _mapUpdateCompleted(0),
           _mapUpdateScheduleFailures(0),
           _mapUpdatePending(0),
-          _mapUpdatePendingHighWater(0) { }
+          _mapUpdatePendingHighWater(0),
+          _worldSessionPacketsQueued(0),
+          _worldSessionPacketsProcessed(0),
+          _worldSessionQueueDepth(0),
+          _worldSessionQueueDepthHighWater(0) { }
 
     void RuntimeMetrics::Reset()
     {
@@ -84,6 +91,10 @@ namespace Diagnostics
         _mapUpdateScheduleFailures.store(0, std::memory_order_relaxed);
         _mapUpdatePending.store(0, std::memory_order_relaxed);
         _mapUpdatePendingHighWater.store(0, std::memory_order_relaxed);
+        _worldSessionPacketsQueued.store(0, std::memory_order_relaxed);
+        _worldSessionPacketsProcessed.store(0, std::memory_order_relaxed);
+        _worldSessionQueueDepth.store(0, std::memory_order_relaxed);
+        _worldSessionQueueDepthHighWater.store(0, std::memory_order_relaxed);
     }
 
     void RuntimeMetrics::RecordWorldUpdate(uint32 diffMs)
@@ -120,6 +131,19 @@ namespace Diagnostics
         _mapUpdateWait.Record(waitMs);
     }
 
+    void RuntimeMetrics::RecordWorldSessionPacketQueued(uint32 queueDepth)
+    {
+        _worldSessionPacketsQueued.fetch_add(1, std::memory_order_relaxed);
+        _worldSessionQueueDepth.store(queueDepth, std::memory_order_relaxed);
+        StoreMax(_worldSessionQueueDepthHighWater, queueDepth);
+    }
+
+    void RuntimeMetrics::RecordWorldSessionPacketProcessed(uint32 queueDepth)
+    {
+        _worldSessionPacketsProcessed.fetch_add(1, std::memory_order_relaxed);
+        _worldSessionQueueDepth.store(queueDepth, std::memory_order_relaxed);
+    }
+
     RuntimeMetricsSnapshot RuntimeMetrics::Snapshot() const
     {
         RuntimeMetricsSnapshot snapshot;
@@ -131,6 +155,10 @@ namespace Diagnostics
         snapshot.MapUpdater.Pending = _mapUpdatePending.load(std::memory_order_relaxed);
         snapshot.MapUpdater.PendingHighWater = _mapUpdatePendingHighWater.load(std::memory_order_relaxed);
         snapshot.MapUpdater.Wait = _mapUpdateWait.Snapshot();
+        snapshot.WorldSession.PacketsQueued = _worldSessionPacketsQueued.load(std::memory_order_relaxed);
+        snapshot.WorldSession.PacketsProcessed = _worldSessionPacketsProcessed.load(std::memory_order_relaxed);
+        snapshot.WorldSession.QueueDepth = _worldSessionQueueDepth.load(std::memory_order_relaxed);
+        snapshot.WorldSession.QueueDepthHighWater = _worldSessionQueueDepthHighWater.load(std::memory_order_relaxed);
 
         return snapshot;
     }
@@ -144,7 +172,7 @@ namespace Diagnostics
     std::vector<std::string> FormatRuntimeMetricLines(RuntimeMetricsSnapshot const& snapshot)
     {
         std::vector<std::string> lines;
-        lines.reserve(2);
+        lines.reserve(3);
 
         std::ostringstream worldLine;
         worldLine << "Runtime metrics - World update: samples " << snapshot.WorldUpdate.SampleCount
@@ -165,6 +193,13 @@ namespace Diagnostics
             << ", map pass avg " << snapshot.MapUpdatePasses.Average
             << ", map pass max " << snapshot.MapUpdatePasses.Maximum;
         lines.push_back(mapLine.str());
+
+        std::ostringstream packetLine;
+        packetLine << "Runtime metrics - Packet queue: queued " << snapshot.WorldSession.PacketsQueued
+            << ", processed " << snapshot.WorldSession.PacketsProcessed
+            << ", depth " << snapshot.WorldSession.QueueDepth
+            << ", high-water " << snapshot.WorldSession.QueueDepthHighWater;
+        lines.push_back(packetLine.str());
 
         return lines;
     }

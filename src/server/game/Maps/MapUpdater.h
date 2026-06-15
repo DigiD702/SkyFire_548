@@ -26,6 +26,7 @@ public:
     int activate(size_t num_threads);
     int deactivate();
     bool activated();
+    DelayExecutorMetricsSnapshot GetExecutorMetricsSnapshot() const { return m_executor.GetMetricsSnapshot(); }
 
 private:
     DelayExecutor m_executor;
