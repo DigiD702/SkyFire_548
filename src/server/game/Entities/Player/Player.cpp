@@ -19204,6 +19204,9 @@ void Player::UpdateForQuestWorldObjects()
 
                 if (buildUpdateBlock)
                 {
+                    // Server-side npc flags do not change when quest conditions start passing;
+                    // force the field into the values update so clients refresh spellclick visibility.
+                    obj->ForceValuesUpdateAtIndex(UNIT_FIELD_NPC_FLAGS);
                     obj->BuildValuesUpdateBlockForPlayer(&udata, this);
                     break;
                 }
