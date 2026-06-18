@@ -145,6 +145,7 @@ WorldSession::~WorldSession()
     /// - If have unclosed socket, close it
     if (m_Socket)
     {
+        m_Socket->DetachSession(this);
         m_Socket->CloseSocket();
         m_Socket->RemoveReference();
         m_Socket = NULL;
@@ -443,6 +444,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
         ///- Cleanup socket pointer if need
         if (m_Socket && m_Socket->IsClosed())
         {
+            m_Socket->DetachSession(this);
             m_Socket->RemoveReference();
             m_Socket = NULL;
         }

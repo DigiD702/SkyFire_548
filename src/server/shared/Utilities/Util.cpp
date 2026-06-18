@@ -10,11 +10,27 @@
 #include "utf8.h"
 #include "Util.h"
 
+#include <atomic>
 #include <cstdarg>
+#include <ctime>
+
+namespace
+{
+    uint32 BuildSfmtSeed()
+    {
+        static std::atomic<uint32> seedCounter{ 0 };
+
+        uint32 seed = static_cast<uint32>(std::time(nullptr));
+        seed ^= Skyfire::GetMSTime();
+        seed ^= ++seedCounter * 0x9E3779B9u;
+
+        return seed ? seed : 1;
+    }
+}
 
 static CRandomSFMT& SfmtRand()
 {
-    static thread_local CRandomSFMT sfmtRand;
+    static thread_local CRandomSFMT sfmtRand(static_cast<int>(BuildSfmtSeed()));
     return sfmtRand;
 }
 

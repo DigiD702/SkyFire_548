@@ -17,6 +17,7 @@
 #include "SpellAuras.h"
 #include "SpellInfo.h"
 #include "SpellMgr.h"
+#include "SpellValidation.h"
 #include "World.h"
 
 bool IsPrimaryProfessionSkill(uint32 skill)
@@ -174,28 +175,28 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellInfo const* spellproto,
 
     // Lastly - Set diminishing depending on mechanic
     uint32 mechanic = spellproto->GetAllEffectsMechanicMask();
-    if (mechanic & (1 << MECHANIC_CHARM))
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_CHARM))
         return DiminishingGroup::DIMINISHING_MIND_CONTROL;
-    if (mechanic & (1 << MECHANIC_SILENCE))
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_SILENCE))
         return DiminishingGroup::DIMINISHING_SILENCE;
-    if (mechanic & (1 << MECHANIC_SLEEP))
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_SLEEP))
         return DiminishingGroup::DIMINISHING_SLEEP;
-    if (mechanic & ((1 << MECHANIC_SAPPED) | (1 << MECHANIC_POLYMORPH) | (1 << MECHANIC_SHACKLE)))
+    if (Skyfire::Spells::HasAnyMechanic(mechanic, { MECHANIC_SAPPED, MECHANIC_POLYMORPH, MECHANIC_SHACKLE }))
         return DiminishingGroup::DIMINISHING_DISORIENT;
     // Mechanic Knockout, except Blast Wave
-    if (mechanic & (1 << MECHANIC_KNOCKOUT) && spellproto->SpellIconID != 292)
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_KNOCKOUT) && spellproto->SpellIconID != 292)
         return DiminishingGroup::DIMINISHING_DISORIENT;
-    if (mechanic & (1 << MECHANIC_DISARM))
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_DISARM))
         return DiminishingGroup::DIMINISHING_DISARM;
-    if (mechanic & (1 << MECHANIC_FEAR))
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_FEAR))
         return DiminishingGroup::DIMINISHING_FEAR;
-    if (mechanic & (1 << MECHANIC_STUN))
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_STUN))
         return triggered ? DiminishingGroup::DIMINISHING_STUN : DiminishingGroup::DIMINISHING_CONTROLLED_STUN;
-    if (mechanic & (1 << MECHANIC_BANISH))
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_BANISH))
         return DiminishingGroup::DIMINISHING_BANISH;
-    if (mechanic & (1 << MECHANIC_ROOT))
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_ROOT))
         return triggered ? DiminishingGroup::DIMINISHING_ROOT : DiminishingGroup::DIMINISHING_CONTROLLED_ROOT;
-    if (mechanic & (1 << MECHANIC_HORROR))
+    if (Skyfire::Spells::HasMechanic(mechanic, MECHANIC_HORROR))
         return DiminishingGroup::DIMINISHING_HORROR;
 
     return DiminishingGroup::DIMINISHING_NONE;

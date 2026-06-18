@@ -99,18 +99,9 @@ private:
 
 public:
     // aura effect apply/remove handlers
-    void HandleNULL(AuraApplication const* /*aurApp*/, uint8 /*mode*/, bool /*apply*/) const
-    {
-        // not implemented
-    }
-    void HandleUnused(AuraApplication const* /*aurApp*/, uint8 /*mode*/, bool /*apply*/) const
-    {
-        // useless
-    }
-    void HandleNoImmediateEffect(AuraApplication const* /*aurApp*/, uint8 /*mode*/, bool /*apply*/) const
-    {
-        // aura type not have immediate effect at add/remove and handled by ID in other code place
-    }
+    void HandleNULL(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+    void HandleUnused(AuraApplication const* aurApp, uint8 mode, bool apply) const;
+    void HandleNoImmediateEffect(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     //  visibility & phases
     void HandleModInvisibilityDetect(AuraApplication const* aurApp, uint8 mode, bool apply) const;
     void HandleModInvisibility(AuraApplication const* aurApp, uint8 mode, bool apply) const;

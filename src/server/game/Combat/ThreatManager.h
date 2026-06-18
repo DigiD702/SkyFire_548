@@ -9,6 +9,7 @@
 #include "Common.h"
 #include "LinkedReference/Reference.h"
 #include "SharedDefines.h"
+#include "ThreatCalcHelper.h"
 #include "UnitEvents.h"
 
 #include <list>
@@ -21,15 +22,6 @@ class ThreatManager;
 class SpellInfo;
 
 #define THREAT_UPDATE_INTERVAL 1 * IN_MILLISECONDS    // Server should send threat update to client periodically each second
-
-//==============================================================
-// Class to calculate the real threat based
-
-struct ThreatCalcHelper
-{
-    static float calcThreat(Unit* hatedUnit, Unit* hatingUnit, float threat, SpellSchoolMask schoolMask = SPELL_SCHOOL_MASK_NORMAL, SpellInfo const* threatSpell = NULL);
-    static bool isValidProcess(Unit* hatedUnit, Unit* hatingUnit, SpellInfo const* threatSpell = NULL);
-};
 
 //==============================================================
 class HostileReference : public Reference<Unit, ThreatManager>

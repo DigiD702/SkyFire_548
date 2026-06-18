@@ -44,11 +44,600 @@
 #include "WorldSession.h"
 #include "zlib.h"
 
+namespace
+{
+struct GuidRequest
+{
+    ObjectGuid guid;
+};
+
+struct UInt8Request
+{
+    uint8 value;
+};
+
+struct UInt32Request
+{
+    uint32 value;
+};
+
+struct Int32Request
+{
+    int32 value;
+};
+
+struct UInt64Request
+{
+    uint64 value;
+};
+
+struct BoolRequest
+{
+    bool value;
+};
+
+struct StringRequest
+{
+    std::string value;
+};
+
+struct GossipSelectOptionRequest
+{
+    ObjectGuid guid;
+    std::string code;
+    uint32 gossipListId;
+    uint32 menuId;
+};
+
+struct SetPvPRequest
+{
+    bool hasStatus;
+    bool newPvPStatus;
+};
+
+struct AddFriendRequest
+{
+    std::string name;
+    std::string note;
+};
+
+struct ContactNotesRequest
+{
+    uint64 guid;
+    std::string note;
+};
+
+struct BugReportRequest
+{
+    std::string content;
+    std::string type;
+    uint32 suggestion;
+};
+
+struct ResurrectResponseRequest
+{
+    ObjectGuid guid;
+    uint32 status;
+};
+
+struct AreaTriggerRequest
+{
+    uint32 triggerId;
+    uint8 unk1;
+    uint8 unk2;
+};
+
+struct ActionButtonRequest
+{
+    ObjectGuid buttonStream;
+    uint8 slotId;
+};
+
+struct WorldTeleportRequest
+{
+    uint32 time;
+    uint32 mapId;
+    float positionX;
+    float positionY;
+    float positionZ;
+    float orientation;
+};
+
+struct ComplainRequest
+{
+    uint64 spammerGuid;
+    uint32 unk1;
+    uint32 unk2;
+    uint32 unk3;
+    uint32 unk4;
+    std::string description;
+    uint8 spamType;
+};
+
+struct TimeSyncRequest
+{
+    uint32 counter;
+    uint32 clientTicks;
+};
+
+struct UpdateMissileTrajectoryRequest
+{
+    uint64 guid;
+    uint32 spellId;
+    float elevation;
+    float speed;
+    float curX;
+    float curY;
+    float curZ;
+    float targetX;
+    float targetY;
+    float targetZ;
+    uint8 moveStop;
+};
+
+struct SceneCompletedRequest
+{
+    uint32 unk;
+    uint8 hasData;
+};
+
+void ReadRepopRequest(WorldPacket& recvData)
+{
+    recvData.read_skip<uint8>();
+}
+
+GossipSelectOptionRequest ReadGossipSelectOptionRequest(WorldPacket& recvData, Player* player)
+{
+    GossipSelectOptionRequest request;
+    uint8 boxTextLength = 0;
+
+    recvData >> request.gossipListId >> request.menuId;
+
+    request.guid[3] = recvData.ReadBit();
+    request.guid[0] = recvData.ReadBit();
+    request.guid[1] = recvData.ReadBit();
+    request.guid[4] = recvData.ReadBit();
+    request.guid[7] = recvData.ReadBit();
+    request.guid[5] = recvData.ReadBit();
+    request.guid[6] = recvData.ReadBit();
+    boxTextLength = recvData.ReadBits(8);
+    request.guid[2] = recvData.ReadBit();
+
+    recvData.ReadByteSeq(request.guid[7]);
+    recvData.ReadByteSeq(request.guid[3]);
+    recvData.ReadByteSeq(request.guid[4]);
+    recvData.ReadByteSeq(request.guid[6]);
+    recvData.ReadByteSeq(request.guid[0]);
+    recvData.ReadByteSeq(request.guid[5]);
+
+    if (player->PlayerTalkClass->IsGossipOptionCoded(request.gossipListId))
+        request.code = recvData.ReadString(boxTextLength);
+
+    recvData.ReadByteSeq(request.guid[2]);
+    recvData.ReadByteSeq(request.guid[1]);
+
+    return request;
+}
+
+SetPvPRequest ReadSetPvPRequest(WorldPacket& recvData)
+{
+    SetPvPRequest request;
+    request.hasStatus = recvData.size() == 1;
+    request.newPvPStatus = false;
+
+    if (request.hasStatus)
+        request.newPvPStatus = recvData.ReadBit();
+
+    return request;
+}
+
+UInt32Request ReadUInt32Request(WorldPacket& recvData)
+{
+    UInt32Request request;
+    recvData >> request.value;
+    return request;
+}
+
+Int32Request ReadInt32Request(WorldPacket& recvData)
+{
+    Int32Request request;
+    recvData >> request.value;
+    return request;
+}
+
+UInt8Request ReadUInt8Request(WorldPacket& recvData)
+{
+    UInt8Request request;
+    recvData >> request.value;
+    return request;
+}
+
+UInt64Request ReadUInt64Request(WorldPacket& recvData)
+{
+    UInt64Request request;
+    recvData >> request.value;
+    return request;
+}
+
+StringRequest ReadStringRequest(WorldPacket& recvData)
+{
+    StringRequest request;
+    recvData >> request.value;
+    return request;
+}
+
+GuidRequest ReadSetSelectionRequest(WorldPacket& recvData)
+{
+    GuidRequest request;
+
+    request.guid[7] = recvData.ReadBit();
+    request.guid[6] = recvData.ReadBit();
+    request.guid[5] = recvData.ReadBit();
+    request.guid[4] = recvData.ReadBit();
+    request.guid[3] = recvData.ReadBit();
+    request.guid[2] = recvData.ReadBit();
+    request.guid[1] = recvData.ReadBit();
+    request.guid[0] = recvData.ReadBit();
+
+    recvData.ReadByteSeq(request.guid[0]);
+    recvData.ReadByteSeq(request.guid[7]);
+    recvData.ReadByteSeq(request.guid[3]);
+    recvData.ReadByteSeq(request.guid[5]);
+    recvData.ReadByteSeq(request.guid[1]);
+    recvData.ReadByteSeq(request.guid[4]);
+    recvData.ReadByteSeq(request.guid[6]);
+    recvData.ReadByteSeq(request.guid[2]);
+
+    return request;
+}
+
+void ReadContactListRequest(WorldPacket& recvData)
+{
+    recvData.read_skip<uint32>(); // always 1
+}
+
+AddFriendRequest ReadAddFriendRequest(WorldPacket& recvData)
+{
+    AddFriendRequest request;
+    recvData >> request.name;
+    recvData >> request.note;
+    return request;
+}
+
+StringRequest ReadAddIgnoreRequest(WorldPacket& recvData)
+{
+    return ReadStringRequest(recvData);
+}
+
+ContactNotesRequest ReadSetContactNotesRequest(WorldPacket& recvData)
+{
+    ContactNotesRequest request;
+    recvData >> request.guid >> request.note;
+    return request;
+}
+
+BugReportRequest ReadBugReportRequest(WorldPacket& recvData)
+{
+    BugReportRequest request;
+    uint32 contentLength;
+    uint32 typeLength;
+
+    recvData >> request.suggestion >> contentLength;
+    request.content = recvData.ReadString(contentLength);
+
+    recvData >> typeLength;
+    request.type = recvData.ReadString(typeLength);
+
+    return request;
+}
+
+void ReadReclaimCorpseRequest(WorldPacket& recvData)
+{
+    ObjectGuid guid;
+
+    guid[1] = recvData.ReadBit();
+    guid[5] = recvData.ReadBit();
+    guid[7] = recvData.ReadBit();
+    guid[2] = recvData.ReadBit();
+    guid[6] = recvData.ReadBit();
+    guid[3] = recvData.ReadBit();
+    guid[0] = recvData.ReadBit();
+    guid[4] = recvData.ReadBit();
+
+    recvData.ReadByteSeq(guid[2]);
+    recvData.ReadByteSeq(guid[5]);
+    recvData.ReadByteSeq(guid[4]);
+    recvData.ReadByteSeq(guid[6]);
+    recvData.ReadByteSeq(guid[1]);
+    recvData.ReadByteSeq(guid[0]);
+    recvData.ReadByteSeq(guid[7]);
+    recvData.ReadByteSeq(guid[3]);
+}
+
+ResurrectResponseRequest ReadResurrectResponseRequest(WorldPacket& recvData)
+{
+    ResurrectResponseRequest request;
+
+    recvData >> request.status;
+
+    request.guid[3] = recvData.ReadBit();
+    request.guid[0] = recvData.ReadBit();
+    request.guid[6] = recvData.ReadBit();
+    request.guid[4] = recvData.ReadBit();
+    request.guid[5] = recvData.ReadBit();
+    request.guid[2] = recvData.ReadBit();
+    request.guid[1] = recvData.ReadBit();
+    request.guid[7] = recvData.ReadBit();
+
+    recvData.ReadByteSeq(request.guid[7]);
+    recvData.ReadByteSeq(request.guid[0]);
+    recvData.ReadByteSeq(request.guid[1]);
+    recvData.ReadByteSeq(request.guid[3]);
+    recvData.ReadByteSeq(request.guid[4]);
+    recvData.ReadByteSeq(request.guid[6]);
+    recvData.ReadByteSeq(request.guid[2]);
+    recvData.ReadByteSeq(request.guid[5]);
+
+    return request;
+}
+
+AreaTriggerRequest ReadAreaTriggerRequest(WorldPacket& recvData)
+{
+    AreaTriggerRequest request;
+    recvData >> request.triggerId;
+    request.unk1 = recvData.ReadBit();
+    request.unk2 = recvData.ReadBit();
+    return request;
+}
+
+UInt32Request ReadRequestAccountDataRequest(WorldPacket& recvData)
+{
+    UInt32Request request;
+    request.value = recvData.ReadBits(3);
+    return request;
+}
+
+ActionButtonRequest ReadSetActionButtonRequest(WorldPacket& recvData)
+{
+    ActionButtonRequest request;
+    recvData >> request.slotId;
+    recvData.ReadGuidMask(request.buttonStream, 7, 0, 5, 2, 1, 6, 3, 4);
+    recvData.ReadGuidBytes(request.buttonStream, 6, 7, 3, 5, 2, 1, 4, 0);
+    return request;
+}
+
+void ReadMoveTimeSkippedRequest(WorldPacket& recvData)
+{
+    ObjectGuid guid;
+    recvData.read_skip<uint32>(); // time skipped
+
+    guid[5] = recvData.ReadBit();
+    guid[0] = recvData.ReadBit();
+    guid[7] = recvData.ReadBit();
+    guid[4] = recvData.ReadBit();
+    guid[1] = recvData.ReadBit();
+    guid[2] = recvData.ReadBit();
+    guid[6] = recvData.ReadBit();
+    guid[3] = recvData.ReadBit();
+
+    recvData.ReadByteSeq(guid[7]);
+    recvData.ReadByteSeq(guid[2]);
+    recvData.ReadByteSeq(guid[0]);
+    recvData.ReadByteSeq(guid[6]);
+    recvData.ReadByteSeq(guid[1]);
+    recvData.ReadByteSeq(guid[5]);
+    recvData.ReadByteSeq(guid[3]);
+    recvData.ReadByteSeq(guid[4]);
+}
+
+GuidRequest ReadInspectRequest(WorldPacket& recvData)
+{
+    GuidRequest request;
+
+    request.guid[0] = recvData.ReadBit();
+    request.guid[3] = recvData.ReadBit();
+    request.guid[7] = recvData.ReadBit();
+    request.guid[2] = recvData.ReadBit();
+    request.guid[5] = recvData.ReadBit();
+    request.guid[1] = recvData.ReadBit();
+    request.guid[4] = recvData.ReadBit();
+    request.guid[6] = recvData.ReadBit();
+
+    recvData.ReadByteSeq(request.guid[3]);
+    recvData.ReadByteSeq(request.guid[5]);
+    recvData.ReadByteSeq(request.guid[2]);
+    recvData.ReadByteSeq(request.guid[4]);
+    recvData.ReadByteSeq(request.guid[1]);
+    recvData.ReadByteSeq(request.guid[6]);
+    recvData.ReadByteSeq(request.guid[0]);
+    recvData.ReadByteSeq(request.guid[7]);
+
+    return request;
+}
+
+GuidRequest ReadInspectHonorStatsRequest(WorldPacket& recvData)
+{
+    GuidRequest request;
+    recvData.ReadGuidMask(request.guid, 4, 3, 6, 1, 0, 2, 5, 7);
+    recvData.ReadGuidBytes(request.guid, 0, 5, 1, 4, 2, 6, 7, 3);
+    return request;
+}
+
+WorldTeleportRequest ReadWorldTeleportRequest(WorldPacket& recvData)
+{
+    WorldTeleportRequest request;
+    recvData >> request.time;
+    recvData >> request.mapId;
+    recvData >> request.positionX;
+    recvData >> request.positionY;
+    recvData >> request.positionZ;
+    recvData >> request.orientation;
+    return request;
+}
+
+ComplainRequest ReadComplainRequest(WorldPacket& recvData)
+{
+    ComplainRequest request = ComplainRequest();
+    recvData >> request.spamType;
+    recvData >> request.spammerGuid;
+
+    switch (request.spamType)
+    {
+        case 0:
+            recvData >> request.unk1;
+            recvData >> request.unk2;
+            recvData >> request.unk3;
+            break;
+        case 1:
+            recvData >> request.unk1;
+            recvData >> request.unk2;
+            recvData >> request.unk3;
+            recvData >> request.unk4;
+            recvData >> request.description;
+            break;
+    }
+
+    return request;
+}
+
+BoolRequest ReadFarSightRequest(WorldPacket& recvData)
+{
+    BoolRequest request;
+    request.value = recvData.ReadBit();
+    return request;
+}
+
+TimeSyncRequest ReadTimeSyncRequest(WorldPacket& recvData)
+{
+    TimeSyncRequest request;
+    recvData >> request.counter >> request.clientTicks;
+    return request;
+}
+
+GuidRequest ReadQueryInspectAchievementsRequest(WorldPacket& recvData)
+{
+    GuidRequest request;
+
+    request.guid[2] = recvData.ReadBit();
+    request.guid[7] = recvData.ReadBit();
+    request.guid[1] = recvData.ReadBit();
+    request.guid[5] = recvData.ReadBit();
+    request.guid[4] = recvData.ReadBit();
+    request.guid[0] = recvData.ReadBit();
+    request.guid[3] = recvData.ReadBit();
+    request.guid[6] = recvData.ReadBit();
+
+    recvData.ReadByteSeq(request.guid[7]);
+    recvData.ReadByteSeq(request.guid[2]);
+    recvData.ReadByteSeq(request.guid[0]);
+    recvData.ReadByteSeq(request.guid[4]);
+    recvData.ReadByteSeq(request.guid[1]);
+    recvData.ReadByteSeq(request.guid[5]);
+    recvData.ReadByteSeq(request.guid[6]);
+    recvData.ReadByteSeq(request.guid[3]);
+
+    return request;
+}
+
+GuidRequest ReadAreaSpiritHealerQueryRequest(WorldPacket& recvData)
+{
+    GuidRequest request;
+    recvData.ReadGuidMask(request.guid, 5, 6, 0, 4, 1, 2, 7, 3);
+    recvData.ReadGuidBytes(request.guid, 0, 2, 6, 7, 1, 5, 3, 4);
+    return request;
+}
+
+GuidRequest ReadAreaSpiritHealerQueueRequest(WorldPacket& recvData)
+{
+    GuidRequest request;
+
+    request.guid[5] = recvData.ReadBit();
+    request.guid[4] = recvData.ReadBit();
+    request.guid[0] = recvData.ReadBit();
+    request.guid[2] = recvData.ReadBit();
+    request.guid[7] = recvData.ReadBit();
+    request.guid[1] = recvData.ReadBit();
+    request.guid[6] = recvData.ReadBit();
+    request.guid[3] = recvData.ReadBit();
+
+    recvData.ReadByteSeq(request.guid[1]);
+    recvData.ReadByteSeq(request.guid[7]);
+    recvData.ReadByteSeq(request.guid[6]);
+    recvData.ReadByteSeq(request.guid[2]);
+    recvData.ReadByteSeq(request.guid[4]);
+    recvData.ReadByteSeq(request.guid[3]);
+    recvData.ReadByteSeq(request.guid[0]);
+    recvData.ReadByteSeq(request.guid[5]);
+
+    return request;
+}
+
+BoolRequest ReadInstanceLockResponseRequest(WorldPacket& recvPacket)
+{
+    BoolRequest request;
+    request.value = recvPacket.ReadBit();
+    return request;
+}
+
+UpdateMissileTrajectoryRequest ReadUpdateMissileTrajectoryRequest(WorldPacket& recvPacket)
+{
+    UpdateMissileTrajectoryRequest request;
+    recvPacket >> request.guid >> request.spellId >> request.elevation >> request.speed;
+    recvPacket >> request.curX >> request.curY >> request.curZ;
+    recvPacket >> request.targetX >> request.targetY >> request.targetZ;
+    recvPacket >> request.moveStop;
+    return request;
+}
+
+GuidRequest ReadObjectUpdateFailedRequest(WorldPacket& recvPacket)
+{
+    GuidRequest request;
+
+    request.guid[3] = recvPacket.ReadBit();
+    request.guid[5] = recvPacket.ReadBit();
+    request.guid[6] = recvPacket.ReadBit();
+    request.guid[0] = recvPacket.ReadBit();
+    request.guid[1] = recvPacket.ReadBit();
+    request.guid[2] = recvPacket.ReadBit();
+    request.guid[7] = recvPacket.ReadBit();
+    request.guid[4] = recvPacket.ReadBit();
+
+    recvPacket.ReadByteSeq(request.guid[0]);
+    recvPacket.ReadByteSeq(request.guid[6]);
+    recvPacket.ReadByteSeq(request.guid[5]);
+    recvPacket.ReadByteSeq(request.guid[7]);
+    recvPacket.ReadByteSeq(request.guid[2]);
+    recvPacket.ReadByteSeq(request.guid[1]);
+    recvPacket.ReadByteSeq(request.guid[3]);
+    recvPacket.ReadByteSeq(request.guid[4]);
+
+    return request;
+}
+
+void ReadDiscardedTimeSyncAcksRequest(WorldPacket& recvData)
+{
+    bool hasInfo = !recvData.ReadBit();
+
+    if (hasInfo)
+        recvData.read_skip<uint32>();
+}
+
+SceneCompletedRequest ReadSceneCompletedRequest(WorldPacket& recvPacket)
+{
+    SceneCompletedRequest request;
+    request.unk = 0;
+    request.hasData = recvPacket.ReadBit();
+    if (request.hasData)
+        request.unk = recvPacket.read<uint32>();
+    return request;
+}
+}
+
 void WorldSession::HandleRepopRequestOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Recvd CMSG_REPOP_REQUEST Message");
 
-    recvData.read_skip<uint8>();
+    ReadRepopRequest(recvData);
 
     if (GetPlayer()->IsAlive() || GetPlayer()->HasFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_GHOST))
         return;
@@ -78,60 +667,31 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: CMSG_GOSSIP_SELECT_OPTION");
 
-    ObjectGuid guid;
-    uint32 gossipListId;
-    uint32 menuId;
-    uint8 boxTextLength = 0;
-    std::string code = "";
-
-    recvData >> gossipListId >> menuId;
-
-    guid[3] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[7] = recvData.ReadBit();
-    guid[5] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-    boxTextLength = recvData.ReadBits(8);
-    guid[2] = recvData.ReadBit();
-
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[3]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[0]);
-    recvData.ReadByteSeq(guid[5]);
-
-    if (_player->PlayerTalkClass->IsGossipOptionCoded(gossipListId))
-        code = recvData.ReadString(boxTextLength);
-
-    recvData.ReadByteSeq(guid[2]);
-    recvData.ReadByteSeq(guid[1]);
+    GossipSelectOptionRequest request = ReadGossipSelectOptionRequest(recvData, _player);
 
     Creature* unit = NULL;
     GameObject* go = NULL;
-    if (IS_CRE_OR_VEH_GUID(guid))
+    if (IS_CRE_OR_VEH_GUID(request.guid))
     {
-        unit = GetPlayer()->GetNPCIfCanInteractWith(guid, UNIT_NPC_FLAG_NONE);
+        unit = GetPlayer()->GetNPCIfCanInteractWith(request.guid, UNIT_NPC_FLAG_NONE);
         if (!unit)
         {
-            SF_LOG_DEBUG("network", "WORLD: HandleGossipSelectOptionOpcode - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)));
+            SF_LOG_DEBUG("network", "WORLD: HandleGossipSelectOptionOpcode - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(request.guid)));
             return;
         }
     }
-    else if (IS_GAMEOBJECT_GUID(guid))
+    else if (IS_GAMEOBJECT_GUID(request.guid))
     {
-        go = _player->GetMap()->GetGameObject(guid);
+        go = _player->GetMap()->GetGameObject(request.guid);
         if (!go)
         {
-            SF_LOG_DEBUG("network", "WORLD: HandleGossipSelectOptionOpcode - GameObject (GUID: %u) not found.", uint32(GUID_LOPART(guid)));
+            SF_LOG_DEBUG("network", "WORLD: HandleGossipSelectOptionOpcode - GameObject (GUID: %u) not found.", uint32(GUID_LOPART(request.guid)));
             return;
         }
     }
     else
     {
-        SF_LOG_DEBUG("network", "WORLD: HandleGossipSelectOptionOpcode - unsupported GUID type for highguid %u. lowpart %u.", uint32(GUID_HIPART(guid)), uint32(GUID_LOPART(guid)));
+        SF_LOG_DEBUG("network", "WORLD: HandleGossipSelectOptionOpcode - unsupported GUID type for highguid %u. lowpart %u.", uint32(GUID_HIPART(request.guid)), uint32(GUID_LOPART(request.guid)));
         return;
     }
 
@@ -149,33 +709,33 @@ void WorldSession::HandleGossipSelectOptionOpcode(WorldPacket& recvData)
         _player->PlayerTalkClass->SendCloseGossip();
         return;
     }
-    if (!code.empty())
+    if (!request.code.empty())
     {
         if (unit)
         {
-            unit->AI()->sGossipSelectCode(_player, menuId, gossipListId, code.c_str());
-            if (!sScriptMgr->OnGossipSelectCode(_player, unit, _player->PlayerTalkClass->GetGossipOptionSender(gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(gossipListId), code.c_str()))
-                _player->OnGossipSelect(unit, gossipListId, menuId);
+            unit->AI()->sGossipSelectCode(_player, request.menuId, request.gossipListId, request.code.c_str());
+            if (!sScriptMgr->OnGossipSelectCode(_player, unit, _player->PlayerTalkClass->GetGossipOptionSender(request.gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(request.gossipListId), request.code.c_str()))
+                _player->OnGossipSelect(unit, request.gossipListId, request.menuId);
         }
         else
         {
-            go->AI()->GossipSelectCode(_player, menuId, gossipListId, code.c_str());
-            sScriptMgr->OnGossipSelectCode(_player, go, _player->PlayerTalkClass->GetGossipOptionSender(gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(gossipListId), code.c_str());
+            go->AI()->GossipSelectCode(_player, request.menuId, request.gossipListId, request.code.c_str());
+            sScriptMgr->OnGossipSelectCode(_player, go, _player->PlayerTalkClass->GetGossipOptionSender(request.gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(request.gossipListId), request.code.c_str());
         }
     }
     else
     {
         if (unit)
         {
-            unit->AI()->sGossipSelect(_player, menuId, gossipListId);
-            if (!sScriptMgr->OnGossipSelect(_player, unit, _player->PlayerTalkClass->GetGossipOptionSender(gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(gossipListId)))
-                _player->OnGossipSelect(unit, gossipListId, menuId);
+            unit->AI()->sGossipSelect(_player, request.menuId, request.gossipListId);
+            if (!sScriptMgr->OnGossipSelect(_player, unit, _player->PlayerTalkClass->GetGossipOptionSender(request.gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(request.gossipListId)))
+                _player->OnGossipSelect(unit, request.gossipListId, request.menuId);
         }
         else
         {
-            go->AI()->GossipSelect(_player, menuId, gossipListId);
-            if (!sScriptMgr->OnGossipSelect(_player, go, _player->PlayerTalkClass->GetGossipOptionSender(gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(gossipListId)))
-                _player->OnGossipSelect(go, gossipListId, menuId);
+            go->AI()->GossipSelect(_player, request.menuId, request.gossipListId);
+            if (!sScriptMgr->OnGossipSelect(_player, go, _player->PlayerTalkClass->GetGossipOptionSender(request.gossipListId), _player->PlayerTalkClass->GetGossipOptionAction(request.gossipListId)))
+                _player->OnGossipSelect(go, request.gossipListId, request.menuId);
         }
     }
 }
@@ -574,12 +1134,11 @@ void WorldSession::HandleLogoutCancelOpcode(WorldPacket& /*recvData*/)
 
 void WorldSession::HandleSetPvP(WorldPacket& recvData)
 {
-    if (recvData.size() == 1)
+    SetPvPRequest request = ReadSetPvPRequest(recvData);
+    if (request.hasStatus)
     {
-        bool newPvPStatus;
-        newPvPStatus = recvData.ReadBit();
-        GetPlayer()->ApplyModFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP, newPvPStatus);
-        GetPlayer()->ApplyModFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_PVP_TIMER, !newPvPStatus);
+        GetPlayer()->ApplyModFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_IN_PVP, request.newPvPStatus);
+        GetPlayer()->ApplyModFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_PVP_TIMER, !request.newPvPStatus);
     }
 }
 void WorldSession::HandleTogglePvP(WorldPacket& /*recvData*/)
@@ -604,10 +1163,9 @@ void WorldSession::HandleTogglePvP(WorldPacket& /*recvData*/)
 
 void WorldSession::HandleZoneUpdateOpcode(WorldPacket& recvData)
 {
-    uint32 newZone;
-    recvData >> newZone;
+    UInt32Request request = ReadUInt32Request(recvData);
 
-    SF_LOG_DEBUG("network", "WORLD: Recvd ZONE_UPDATE: %u", newZone);
+    SF_LOG_DEBUG("network", "WORLD: Recvd ZONE_UPDATE: %u", request.value);
 
     // use server size data
     uint32 newzone, newarea;
@@ -661,41 +1219,21 @@ void WorldSession::HandleRequestCemeteryList(WorldPacket& /*recvPacket*/)
 
 void WorldSession::HandleSetSelectionOpcode(WorldPacket& recvData)
 {
-    ObjectGuid guid;
-
-    guid[7] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-    guid[5] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[3] = recvData.ReadBit();
-    guid[2] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
-
-    recvData.ReadByteSeq(guid[0]);
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[3]);
-    recvData.ReadByteSeq(guid[5]);
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[2]);
-
-    _player->SetSelection(guid);
+    GuidRequest request = ReadSetSelectionRequest(recvData);
+    _player->SetSelection(request.guid);
 }
 
 void WorldSession::HandleStandStateChangeOpcode(WorldPacket& recvData)
 {
     // SF_LOG_DEBUG("network", "WORLD: Received CMSG_STAND_STATE_CHANGE"); -- too many spam in log at lags/debug stop
-    uint32 animstate;
-    recvData >> animstate;
+    UInt32Request request = ReadUInt32Request(recvData);
 
-    _player->SetStandState(animstate);
+    _player->SetStandState(request.value);
 }
 
 void WorldSession::HandleContactListOpcode(WorldPacket& recvData)
 {
-    recvData.read_skip<uint32>(); // always 1
+    ReadContactListRequest(recvData);
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_CONTACT_LIST");
     _player->GetSocial()->SendSocialList(_player);
 }
@@ -704,24 +1242,20 @@ void WorldSession::HandleAddFriendOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_ADD_FRIEND");
 
-    std::string friendName = GetSkyFireString(LANG_FRIEND_IGNORE_UNKNOWN);
-    std::string friendNote;
+    AddFriendRequest request = ReadAddFriendRequest(recvData);
 
-    recvData >> friendName;
-    recvData >> friendNote;
-
-    friendName = friendName.substr(0, friendName.find("-"));
-    if (!normalizePlayerName(friendName))
+    request.name = request.name.substr(0, request.name.find("-"));
+    if (!normalizePlayerName(request.name))
         return;
 
     SF_LOG_DEBUG("network", "WORLD: %s asked to add friend : '%s'",
-        GetPlayer()->GetName().c_str(), friendName.c_str());
+        GetPlayer()->GetName().c_str(), request.name.c_str());
 
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GUID_RACE_ACC_BY_NAME);
 
-    stmt->setString(0, friendName);
+    stmt->setString(0, request.name);
 
-    _addFriendCallback.SetParam(friendNote);
+    _addFriendCallback.SetParam(request.note);
     _addFriendCallback.SetFutureResult(CharacterDatabase.AsyncQuery(stmt));
 }
 
@@ -781,15 +1315,13 @@ void WorldSession::HandleAddFriendOpcodeCallBack(PreparedQueryResult result, std
 
 void WorldSession::HandleDelFriendOpcode(WorldPacket& recvData)
 {
-    uint64 FriendGUID;
-
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_DEL_FRIEND");
 
-    recvData >> FriendGUID;
+    UInt64Request request = ReadUInt64Request(recvData);
 
-    _player->GetSocial()->RemoveFromSocialList(GUID_LOPART(FriendGUID), false);
+    _player->GetSocial()->RemoveFromSocialList(GUID_LOPART(request.value), false);
 
-    sSocialMgr->SendFriendStatus(GetPlayer(), FRIEND_REMOVED, GUID_LOPART(FriendGUID), false);
+    sSocialMgr->SendFriendStatus(GetPlayer(), FRIEND_REMOVED, GUID_LOPART(request.value), false);
 
     SF_LOG_DEBUG("network", "WORLD: Sent motd (SMSG_FRIEND_STATUS)");
 }
@@ -798,19 +1330,17 @@ void WorldSession::HandleAddIgnoreOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_ADD_IGNORE");
 
-    std::string ignoreName = GetSkyFireString(LANG_FRIEND_IGNORE_UNKNOWN);
+    StringRequest request = ReadAddIgnoreRequest(recvData);
 
-    recvData >> ignoreName;
-
-    if (!normalizePlayerName(ignoreName))
+    if (!normalizePlayerName(request.value))
         return;
 
     SF_LOG_DEBUG("network", "WORLD: %s asked to Ignore: '%s'",
-        GetPlayer()->GetName().c_str(), ignoreName.c_str());
+        GetPlayer()->GetName().c_str(), request.value.c_str());
 
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_GUID_BY_NAME);
 
-    stmt->setString(0, ignoreName);
+    stmt->setString(0, request.value);
 
     _addIgnoreCallback = CharacterDatabase.AsyncQuery(stmt);
 }
@@ -854,15 +1384,13 @@ void WorldSession::HandleAddIgnoreOpcodeCallBack(PreparedQueryResult result)
 
 void WorldSession::HandleDelIgnoreOpcode(WorldPacket& recvData)
 {
-    uint64 IgnoreGUID;
-
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_DEL_IGNORE");
 
-    recvData >> IgnoreGUID;
+    UInt64Request request = ReadUInt64Request(recvData);
 
-    _player->GetSocial()->RemoveFromSocialList(GUID_LOPART(IgnoreGUID), true);
+    _player->GetSocial()->RemoveFromSocialList(GUID_LOPART(request.value), true);
 
-    sSocialMgr->SendFriendStatus(GetPlayer(), FRIEND_IGNORE_REMOVED, GUID_LOPART(IgnoreGUID), false);
+    sSocialMgr->SendFriendStatus(GetPlayer(), FRIEND_IGNORE_REMOVED, GUID_LOPART(request.value), false);
 
     SF_LOG_DEBUG("network", "WORLD: Sent motd (SMSG_FRIEND_STATUS)");
 }
@@ -870,35 +1398,26 @@ void WorldSession::HandleDelIgnoreOpcode(WorldPacket& recvData)
 void WorldSession::HandleSetContactNotesOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "CMSG_SET_CONTACT_NOTES");
-    uint64 guid;
-    std::string note;
-    recvData >> guid >> note;
-    _player->GetSocial()->SetFriendNote(GUID_LOPART(guid), note);
+    ContactNotesRequest request = ReadSetContactNotesRequest(recvData);
+    _player->GetSocial()->SetFriendNote(GUID_LOPART(request.guid), request.note);
 }
 
 void WorldSession::HandleBugOpcode(WorldPacket& recvData)
 {
-    uint32 suggestion, contentlen, typelen;
-    std::string content, type;
+    BugReportRequest request = ReadBugReportRequest(recvData);
 
-    recvData >> suggestion >> contentlen;
-    content = recvData.ReadString(contentlen);
-
-    recvData >> typelen;
-    type = recvData.ReadString(typelen);
-
-    if (suggestion == 0)
+    if (request.suggestion == 0)
         SF_LOG_DEBUG("network", "WORLD: Received CMSG_BUG [Bug Report]");
     else
         SF_LOG_DEBUG("network", "WORLD: Received CMSG_BUG [Suggestion]");
 
-    SF_LOG_DEBUG("network", "%s", type.c_str());
-    SF_LOG_DEBUG("network", "%s", content.c_str());
+    SF_LOG_DEBUG("network", "%s", request.type.c_str());
+    SF_LOG_DEBUG("network", "%s", request.content.c_str());
 
     PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_INS_BUG_REPORT);
 
-    stmt->setString(0, type);
-    stmt->setString(1, content);
+    stmt->setString(0, request.type);
+    stmt->setString(1, request.content);
 
     CharacterDatabase.Execute(stmt);
 }
@@ -907,25 +1426,7 @@ void WorldSession::HandleReclaimCorpseOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_RECLAIM_CORPSE");
 
-    ObjectGuid guid;
-
-    guid[1] = recvData.ReadBit();
-    guid[5] = recvData.ReadBit();
-    guid[7] = recvData.ReadBit();
-    guid[2] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-    guid[3] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-
-    recvData.ReadByteSeq(guid[2]);
-    recvData.ReadByteSeq(guid[5]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[0]);
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[3]);
+    ReadReclaimCorpseRequest(recvData);
 
     if (GetPlayer()->IsAlive())
         return;
@@ -961,39 +1462,18 @@ void WorldSession::HandleResurrectResponseOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_RESURRECT_RESPONSE");
 
-    ObjectGuid guid;
-    uint32 status;
-
-    recvData >> status;
-
-    guid[3] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[5] = recvData.ReadBit();
-    guid[2] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
-    guid[7] = recvData.ReadBit();
-
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[0]);
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[3]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[2]);
-    recvData.ReadByteSeq(guid[5]);
+    ResurrectResponseRequest request = ReadResurrectResponseRequest(recvData);
 
     if (GetPlayer()->IsAlive())
         return;
 
-    if (status == 1)
+    if (request.status == 1)
     {
         GetPlayer()->ClearResurrectRequestData();           // reject
         return;
     }
 
-    if (!GetPlayer()->IsRessurectRequestedBy(guid))
+    if (!GetPlayer()->IsRessurectRequestedBy(request.guid))
         return;
 
     GetPlayer()->ResurectUsingRequestData();
@@ -1001,34 +1481,30 @@ void WorldSession::HandleResurrectResponseOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recvData)
 {
-    uint32 triggerId;
-    uint8 unk1, unk2;
-    recvData >> triggerId;
-    unk1 = recvData.ReadBit();
-    unk2 = recvData.ReadBit();
+    AreaTriggerRequest request = ReadAreaTriggerRequest(recvData);
 
-    SF_LOG_DEBUG("network", "CMSG_AREATRIGGER. Trigger ID: %u, Unk1: %u, Unk2: %u", triggerId, unk1, unk2);
+    SF_LOG_DEBUG("network", "CMSG_AREATRIGGER. Trigger ID: %u, Unk1: %u, Unk2: %u", request.triggerId, request.unk1, request.unk2);
 
     Player* player = GetPlayer();
     if (player->IsInFlight())
     {
         SF_LOG_DEBUG("network", "HandleAreaTriggerOpcode: Player '%s' (GUID: %u) in flight, ignore Area Trigger ID:%u, unk1: %u, unk2: %u",
-            player->GetName().c_str(), player->GetGUIDLow(), triggerId, unk1, unk2);
+            player->GetName().c_str(), player->GetGUIDLow(), request.triggerId, request.unk1, request.unk2);
         return;
     }
 
-    AreaTriggerEntry const* atEntry = sAreaTriggerStore.LookupEntry(triggerId);
+    AreaTriggerEntry const* atEntry = sAreaTriggerStore.LookupEntry(request.triggerId);
     if (!atEntry)
     {
         SF_LOG_DEBUG("network", "HandleAreaTriggerOpcode: Player '%s' (GUID: %u) send unknown (by DBC) Area Trigger ID:%u, unk1: %u, unk2: %u",
-            player->GetName().c_str(), player->GetGUIDLow(), triggerId, unk1, unk2);
+            player->GetName().c_str(), player->GetGUIDLow(), request.triggerId, request.unk1, request.unk2);
         return;
     }
 
     if (player->GetMapId() != atEntry->mapid)
     {
         SF_LOG_DEBUG("network", "HandleAreaTriggerOpcode: Player '%s' (GUID: %u) too far (trigger map: %u player map: %u), ignore Area Trigger ID: %u, unk1: %u, unk2: %u",
-            player->GetName().c_str(), atEntry->mapid, player->GetMapId(), player->GetGUIDLow(), triggerId, unk1, unk2);
+            player->GetName().c_str(), atEntry->mapid, player->GetMapId(), player->GetGUIDLow(), request.triggerId, request.unk1, request.unk2);
         return;
     }
 
@@ -1042,7 +1518,7 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recvData)
         if (dist > atEntry->radius + delta)
         {
             SF_LOG_DEBUG("network", "HandleAreaTriggerOpcode: Player '%s' (GUID: %u) too far (radius: %f distance: %f), ignore Area Trigger ID: %u, unk1: %u, unk2: %u",
-                player->GetName().c_str(), player->GetGUIDLow(), atEntry->radius, dist, triggerId, unk1, unk2);
+                player->GetName().c_str(), player->GetGUIDLow(), atEntry->radius, dist, request.triggerId, request.unk1, request.unk2);
             return;
         }
     }
@@ -1073,23 +1549,23 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recvData)
             (fabs(dz) > atEntry->box_z / 2 + delta))
         {
             SF_LOG_DEBUG("network", "HandleAreaTriggerOpcode: Player '%s' (GUID: %u) too far (1/2 box X: %f 1/2 box Y: %f 1/2 box Z: %f rotatedPlayerX: %f rotatedPlayerY: %f dZ:%f), ignore Area Trigger ID: %u, unk1: %u, unk2: %u",
-                player->GetName().c_str(), player->GetGUIDLow(), atEntry->box_x / 2, atEntry->box_y / 2, atEntry->box_z / 2, rotPlayerX, rotPlayerY, dz, triggerId, unk1, unk2);
+                player->GetName().c_str(), player->GetGUIDLow(), atEntry->box_x / 2, atEntry->box_y / 2, atEntry->box_z / 2, rotPlayerX, rotPlayerY, dz, request.triggerId, request.unk1, request.unk2);
             return;
         }
     }
 
     if (player->isDebugAreaTriggers)
-        ChatHandler(player->GetSession()).PSendSysMessage(LANG_DEBUG_AREATRIGGER_REACHED, triggerId);
+        ChatHandler(player->GetSession()).PSendSysMessage(LANG_DEBUG_AREATRIGGER_REACHED, request.triggerId);
 
     if (sScriptMgr->OnAreaTrigger(player, atEntry))
         return;
 
     if (player->IsAlive())
-        if (uint32 questId = sObjectMgr->GetQuestForAreaTrigger(triggerId))
+        if (uint32 questId = sObjectMgr->GetQuestForAreaTrigger(request.triggerId))
             if (player->GetQuestStatus(questId) == QUEST_STATUS_INCOMPLETE)
                 player->AreaExploredOrEventHappens(questId);
 
-    if (sObjectMgr->IsTavernAreaTrigger(triggerId))
+    if (sObjectMgr->IsTavernAreaTrigger(request.triggerId))
     {
         // set resting flag we are in the inn
         player->SetFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_RESTING);
@@ -1105,15 +1581,15 @@ void WorldSession::HandleAreaTriggerOpcode(WorldPacket& recvData)
     if (Battleground* bg = player->GetBattleground())
         if (bg->GetStatus() == STATUS_IN_PROGRESS)
         {
-            bg->HandleAreaTrigger(player, triggerId);
+            bg->HandleAreaTrigger(player, request.triggerId);
             return;
         }
 
     if (OutdoorPvP* pvp = player->GetOutdoorPvP())
-        if (pvp->HandleAreaTrigger(_player, triggerId))
+        if (pvp->HandleAreaTrigger(_player, request.triggerId))
             return;
 
-    AreaTriggerStruct const* at = sObjectMgr->GetAreaTrigger(triggerId);
+    AreaTriggerStruct const* at = sObjectMgr->GetAreaTrigger(request.triggerId);
     if (!at)
         return;
 
@@ -1197,14 +1673,14 @@ void WorldSession::HandleRequestAccountData(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_REQUEST_ACCOUNT_DATA");
 
-    uint32 type = recvData.ReadBits(3);
+    UInt32Request request = ReadRequestAccountDataRequest(recvData);
 
-    SF_LOG_DEBUG("network", "RAD: type %u", type);
+    SF_LOG_DEBUG("network", "RAD: type %u", request.value);
 
-    AccountDataType RADType = AccountDataType(type);
+    AccountDataType RADType = AccountDataType(request.value);
     if (RADType >= AccountDataType::NUM_ACCOUNT_DATA_TYPES)
     {
-        SF_LOG_DEBUG("network", "RAD: Unknown account data type: %u", type);
+        SF_LOG_DEBUG("network", "RAD: Unknown account data type: %u", request.value);
         return;
     }
 
@@ -1229,7 +1705,7 @@ void WorldSession::HandleRequestAccountData(WorldPacket& recvData)
 
     ObjectGuid guid;
 
-    data.WriteBits(type, 3);       // type (0-7)
+    data.WriteBits(request.value, 3); // type (0-7)
     data.WriteBit(guid[5]);
     data.WriteBit(guid[1]);
     data.WriteBit(guid[3]);
@@ -1264,23 +1740,18 @@ int32 WorldSession::HandleEnableNagleAlgorithm()
 
 void WorldSession::HandleSetActionButtonOpcode(WorldPacket& recvData)
 {
-    ObjectGuid buttonStream;
-    uint8 slotId;
+    ActionButtonRequest request = ReadSetActionButtonRequest(recvData);
 
-    recvData >> slotId;
-    recvData.ReadGuidMask(buttonStream, 7, 0, 5, 2, 1, 6, 3, 4);
-    recvData.ReadGuidBytes(buttonStream, 6, 7, 3, 5, 2, 1, 4, 0);
+    ActionButtonPACKET* button = reinterpret_cast<ActionButtonPACKET*>(&request.buttonStream);
+    button->id = ACTION_BUTTON_ACTION(request.buttonStream);
+    button->unk = ACTION_BUTTON_TYPE(request.buttonStream);
 
-    ActionButtonPACKET* button = reinterpret_cast<ActionButtonPACKET*>(&buttonStream);
-    button->id = ACTION_BUTTON_ACTION(buttonStream);
-    button->unk = ACTION_BUTTON_TYPE(buttonStream);
-
-    SF_LOG_DEBUG("network", "CMSG_SET_ACTION_BUTTON slotId: %u actionId: %u buttontype: %u", slotId, button->id, button->unk);
+    SF_LOG_DEBUG("network", "CMSG_SET_ACTION_BUTTON slotId: %u actionId: %u buttontype: %u", request.slotId, button->id, button->unk);
 
     if (!button->id)
-        GetPlayer()->removeActionButton(slotId);
+        GetPlayer()->removeActionButton(request.slotId);
     else
-        GetPlayer()->addActionButton(slotId, button->id, ActionButtonType(button->unk));
+        GetPlayer()->addActionButton(request.slotId, button->id, ActionButtonType(button->unk));
 }
 
 void WorldSession::HandleCompleteCinematic(WorldPacket& /*recvData*/)
@@ -1299,27 +1770,7 @@ void WorldSession::HandleMoveTimeSkippedOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_MOVE_TIME_SKIPPED");
 
-    ObjectGuid guid;
-    uint32 time;
-    recvData >> time;
-
-    guid[5] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
-    guid[7] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
-    guid[2] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-    guid[3] = recvData.ReadBit();
-
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[2]);
-    recvData.ReadByteSeq(guid[0]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[5]);
-    recvData.ReadByteSeq(guid[3]);
-    recvData.ReadByteSeq(guid[4]);
+    ReadMoveTimeSkippedRequest(recvData);
 
     //TODO!
 
@@ -1394,60 +1845,39 @@ void WorldSession::HandleMoveGravityAck(WorldPacket& recvData)
 
 void WorldSession::HandleSetActionBarToggles(WorldPacket& recvData)
 {
-    uint8 actionBar;
-
-    recvData >> actionBar;
+    UInt8Request request = ReadUInt8Request(recvData);
 
     if (!GetPlayer())                                        // ignore until not logged (check needed because STATUS_AUTHED)
     {
-        if (actionBar != 0)
-            SF_LOG_ERROR("network", "WorldSession::HandleSetActionBarToggles in not logged state with value: %u, ignored", uint32(actionBar));
+        if (request.value != 0)
+            SF_LOG_ERROR("network", "WorldSession::HandleSetActionBarToggles in not logged state with value: %u, ignored", uint32(request.value));
         return;
     }
 
-    GetPlayer()->SetByteValue(PLAYER_FIELD_LIFETIME_MAX_RANK, 2, actionBar);
+    GetPlayer()->SetByteValue(PLAYER_FIELD_LIFETIME_MAX_RANK, 2, request.value);
 }
 
 void WorldSession::HandlePlayedTime(WorldPacket& recvData)
 {
-    uint8 unk1;
-    recvData >> unk1;                                      // 0 or 1 expected
+    UInt8Request request = ReadUInt8Request(recvData);     // 0 or 1 expected
 
     WorldPacket data(SMSG_PLAYED_TIME, 4 + 4 + 1);
     data << uint32(_player->GetTotalPlayedTime());
     data << uint32(_player->GetLevelPlayedTime());
-    data << uint8(unk1);                                    // 0 - will not show in chat frame
+    data << uint8(request.value);                           // 0 - will not show in chat frame
     SendPacket(&data);
 }
 
 void WorldSession::HandleInspectOpcode(WorldPacket& recvData)
 {
-    ObjectGuid guid;
-
-    guid[0] = recvData.ReadBit();
-    guid[3] = recvData.ReadBit();
-    guid[7] = recvData.ReadBit();
-    guid[2] = recvData.ReadBit();
-    guid[5] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-
-    recvData.ReadByteSeq(guid[3]);
-    recvData.ReadByteSeq(guid[5]);
-    recvData.ReadByteSeq(guid[2]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[0]);
-    recvData.ReadByteSeq(guid[7]);
+    GuidRequest request = ReadInspectRequest(recvData);
 
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_INSPECT");
 
-    Player* player = ObjectAccessor::FindPlayer(guid);
+    Player* player = ObjectAccessor::FindPlayer(request.guid);
     if (!player)
     {
-        SF_LOG_DEBUG("network", "CMSG_INSPECT: No player found from GUID: " UI64FMTD, (uint64)guid);
+        SF_LOG_DEBUG("network", "CMSG_INSPECT: No player found from GUID: " UI64FMTD, (uint64)request.guid);
         return;
     }
 
@@ -1456,15 +1886,13 @@ void WorldSession::HandleInspectOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleInspectHonorStatsOpcode(WorldPacket& recvData)
 {
-    ObjectGuid guid;
-    recvData.ReadGuidMask(guid, 4, 3, 6, 1, 0, 2, 5, 7);
-    recvData.ReadGuidBytes(guid, 0, 5, 1, 4, 2, 6, 7, 3);
+    GuidRequest request = ReadInspectHonorStatsRequest(recvData);
 
-    Player* player = ObjectAccessor::FindPlayer(guid);
+    Player* player = ObjectAccessor::FindPlayer(request.guid);
 
     if (!player)
     {
-        SF_LOG_DEBUG("network", "CMSG_INSPECT_HONOR_STATS: No player found from GUID: " UI64FMTD, (uint64)guid);
+        SF_LOG_DEBUG("network", "CMSG_INSPECT_HONOR_STATS: No player found from GUID: " UI64FMTD, (uint64)request.guid);
         return;
     }
 
@@ -1499,19 +1927,7 @@ void WorldSession::HandleInspectHonorStatsOpcode(WorldPacket& recvData)
 
 void WorldSession::HandleWorldTeleportOpcode(WorldPacket& recvData)
 {
-    uint32 time;
-    uint32 mapid;
-    float PositionX;
-    float PositionY;
-    float PositionZ;
-    float Orientation;
-
-    recvData >> time;                                      // time in m.sec.
-    recvData >> mapid;
-    recvData >> PositionX;
-    recvData >> PositionY;
-    recvData >> PositionZ;
-    recvData >> Orientation;                               // o (3.141593 = 180 degrees)
+    WorldTeleportRequest request = ReadWorldTeleportRequest(recvData);
 
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_WORLD_TELEPORT");
 
@@ -1523,10 +1939,10 @@ void WorldSession::HandleWorldTeleportOpcode(WorldPacket& recvData)
     }
 
     SF_LOG_DEBUG("network", "CMSG_WORLD_TELEPORT: Player = %s, Time = %u, map = %u, x = %f, y = %f, z = %f, o = %f",
-        GetPlayer()->GetName().c_str(), time, mapid, PositionX, PositionY, PositionZ, Orientation);
+        GetPlayer()->GetName().c_str(), request.time, request.mapId, request.positionX, request.positionY, request.positionZ, request.orientation);
 
     if (HasPermission(rbac::RBAC_PERM_OPCODE_WORLD_TELEPORT))
-        GetPlayer()->TeleportTo(mapid, PositionX, PositionY, PositionZ, Orientation);
+        GetPlayer()->TeleportTo(request.mapId, request.positionX, request.positionY, request.positionZ, request.orientation);
     else
         SendNotification(LANG_YOU_NOT_HAVE_PERMISSION);
 }
@@ -1534,8 +1950,7 @@ void WorldSession::HandleWorldTeleportOpcode(WorldPacket& recvData)
 void WorldSession::HandleWhoisOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "Received opcode CMSG_WHOIS");
-    std::string charname;
-    recvData >> charname;
+    StringRequest request = ReadStringRequest(recvData);
 
     if (!HasPermission(rbac::RBAC_PERM_OPCODE_WHOIS))
     {
@@ -1543,17 +1958,17 @@ void WorldSession::HandleWhoisOpcode(WorldPacket& recvData)
         return;
     }
 
-    if (charname.empty() || !normalizePlayerName(charname))
+    if (request.value.empty() || !normalizePlayerName(request.value))
     {
         SendNotification(LANG_NEED_CHARACTER_NAME);
         return;
     }
 
-    Player* player = sObjectAccessor->FindPlayerByName(charname);
+    Player* player = sObjectAccessor->FindPlayerByName(request.value);
 
     if (!player)
     {
-        SendNotification(LANG_PLAYER_NOT_EXIST_OR_OFFLINE, charname.c_str());
+        SendNotification(LANG_PLAYER_NOT_EXIST_OR_OFFLINE, request.value.c_str());
         return;
     }
 
@@ -1567,7 +1982,7 @@ void WorldSession::HandleWhoisOpcode(WorldPacket& recvData)
 
     if (!result)
     {
-        SendNotification(LANG_ACCOUNT_FOR_PLAYER_NOT_FOUND, charname.c_str());
+        SendNotification(LANG_ACCOUNT_FOR_PLAYER_NOT_FOUND, request.value.c_str());
         return;
     }
 
@@ -1582,7 +1997,7 @@ void WorldSession::HandleWhoisOpcode(WorldPacket& recvData)
     if (lastip.empty())
         lastip = "Unknown";
 
-    std::string msg = charname + "'s " + "account is " + acc + ", e-mail: " + email + ", last ip: " + lastip;
+    std::string msg = request.value + "'s " + "account is " + acc + ", e-mail: " + email + ", last ip: " + lastip;
 
     WorldPacket data(SMSG_WHOIS, msg.size() + 1);
     data.WriteBits(msg.size(), 11);
@@ -1592,37 +2007,14 @@ void WorldSession::HandleWhoisOpcode(WorldPacket& recvData)
     SendPacket(&data);
 
     SF_LOG_DEBUG("network", "Received whois command from player %s for character %s",
-        GetPlayer()->GetName().c_str(), charname.c_str());
+        GetPlayer()->GetName().c_str(), request.value.c_str());
 }
 
 void WorldSession::HandleComplainOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: CMSG_COMPLAIN");
 
-    uint8 spam_type;                                        // 0 - mail, 1 - chat
-    uint64 spammer_guid;
-    uint32 unk1 = 0;
-    uint32 unk2 = 0;
-    uint32 unk3 = 0;
-    uint32 unk4 = 0;
-    std::string description = "";
-    recvData >> spam_type;                                 // unk 0x01 const, may be spam type (mail/chat)
-    recvData >> spammer_guid;                              // player guid
-    switch (spam_type)
-    {
-        case 0:
-            recvData >> unk1;                              // const 0
-            recvData >> unk2;                              // probably mail id
-            recvData >> unk3;                              // const 0
-            break;
-        case 1:
-            recvData >> unk1;                              // probably language
-            recvData >> unk2;                              // message type?
-            recvData >> unk3;                              // probably channel id
-            recvData >> unk4;                              // time
-            recvData >> description;                       // spam description string (messagetype, channel name, player name, message)
-            break;
-    }
+    ComplainRequest request = ReadComplainRequest(recvData);
 
     // NOTE: all chat messages from this spammer automatically ignored by spam reporter until logout in case chat spam.
     // if it's mail spam - ALL mails from this spammer automatically removed by client
@@ -1633,19 +2025,18 @@ void WorldSession::HandleComplainOpcode(WorldPacket& recvData)
     data << uint8(0); // value 0xC generates a "CalendarError" in client.
     SendPacket(&data);
 
-    SF_LOG_DEBUG("network", "REPORT SPAM: type %u, guid %u, unk1 %u, unk2 %u, unk3 %u, unk4 %u, message %s", spam_type, GUID_LOPART(spammer_guid), unk1, unk2, unk3, unk4, description.c_str());
+    SF_LOG_DEBUG("network", "REPORT SPAM: type %u, guid %u, unk1 %u, unk2 %u, unk3 %u, unk4 %u, message %s", request.spamType, GUID_LOPART(request.spammerGuid), request.unk1, request.unk2, request.unk3, request.unk4, request.description.c_str());
 }
 
 void WorldSession::HandleRealmSplitOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "CMSG_REALM_SPLIT");
 
-    uint32 unk;
+    UInt32Request request = ReadUInt32Request(recvData);
     std::string split_date = "01/01/01";
-    recvData >> unk;
 
     WorldPacket data(SMSG_REALM_SPLIT, 4 + 4 + split_date.size() + 1);
-    data << unk;
+    data << request.value;
     data << uint32(0x00000000);                             // realm split state
     // split states:
     // 0x0 realm normal
@@ -1661,8 +2052,8 @@ void WorldSession::HandleFarSightOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: CMSG_FAR_SIGHT");
 
-    bool apply = recvData.ReadBit();
-    if (apply)
+    BoolRequest request = ReadFarSightRequest(recvData);
+    if (request.value)
     {
         SF_LOG_DEBUG("network", "Added FarSight " UI64FMTD " to player %u", _player->GetUInt64Value(PLAYER_FIELD_FARSIGHT_OBJECT), _player->GetGUIDLow());
         if (WorldObject* target = _player->GetViewpoint())
@@ -1683,8 +2074,8 @@ void WorldSession::HandleSetTitleOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "CMSG_SET_TITLE");
 
-    int32 title;
-    recvData >> title;
+    Int32Request request = ReadInt32Request(recvData);
+    int32 title = request.value;
 
     // -1 at none
     if (title > 0 && title < MAX_TITLE_INDEX)
@@ -1716,20 +2107,19 @@ void WorldSession::HandleTimeSyncResp(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "CMSG_TIME_SYNC_RESPONSE");
 
-    uint32 counter, clientTicks;
-    recvData >> counter >> clientTicks;
+    TimeSyncRequest request = ReadTimeSyncRequest(recvData);
 
-    if (counter != _player->m_timeSyncQueue.front())
+    if (request.counter != _player->m_timeSyncQueue.front())
         SF_LOG_ERROR("network", "Wrong time sync counter from player %s (cheater?)", _player->GetName().c_str());
 
-    SF_LOG_DEBUG("network", "Time sync received: counter %u, client ticks %u, time since last sync %u", counter, clientTicks, clientTicks - _player->m_timeSyncClient);
+    SF_LOG_DEBUG("network", "Time sync received: counter %u, client ticks %u, time since last sync %u", request.counter, request.clientTicks, request.clientTicks - _player->m_timeSyncClient);
 
-    uint32 ourTicks = clientTicks + (getMSTime() - _player->m_timeSyncServer);
+    uint32 ourTicks = request.clientTicks + (getMSTime() - _player->m_timeSyncServer);
 
     // diff should be small
-    SF_LOG_DEBUG("network", "Our ticks: %u, diff %u, latency %u", ourTicks, ourTicks - clientTicks, GetLatency());
+    SF_LOG_DEBUG("network", "Our ticks: %u, diff %u, latency %u", ourTicks, ourTicks - request.clientTicks, GetLatency());
 
-    _player->m_timeSyncClient = clientTicks;
+    _player->m_timeSyncClient = request.clientTicks;
     _player->m_timeSyncQueue.pop();
 }
 
@@ -1750,14 +2140,13 @@ void WorldSession::HandleSetDungeonDifficultyOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "Received: CMSG_SET_DUNGEON_DIFFICULTY");
 
-    uint32 Difficulty;
-    recvData >> Difficulty;
+    UInt32Request request = ReadUInt32Request(recvData);
 
-    DifficultyEntry const* difficultyEntry = sDifficultyStore.LookupEntry(Difficulty);
+    DifficultyEntry const* difficultyEntry = sDifficultyStore.LookupEntry(request.value);
     if (!difficultyEntry)
     {
         SF_LOG_DEBUG("network", "%d sent an invalid instance mode %u!",
-            _player->GetGUIDLow(), Difficulty);
+            _player->GetGUIDLow(), request.value);
         return;
     }
 
@@ -1820,14 +2209,13 @@ void WorldSession::HandleSetRaidDifficultyOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "Received: CMSG_SET_RAID_DIFFICULTY");
 
-    uint32 Difficulty;
-    recvData >> Difficulty;
+    UInt32Request request = ReadUInt32Request(recvData);
 
-    DifficultyEntry const* difficultyEntry = sDifficultyStore.LookupEntry(Difficulty);
+    DifficultyEntry const* difficultyEntry = sDifficultyStore.LookupEntry(request.value);
     if (!difficultyEntry)
     {
         SF_LOG_DEBUG("network", "%d sent an invalid instance mode %u!",
-            _player->GetGUIDLow(), Difficulty);
+            _player->GetGUIDLow(), request.value);
         return;
     }
     if (difficultyEntry->maptype != MAP_RAID)
@@ -1920,40 +2308,21 @@ void WorldSession::HandleSetTaxiBenchmarkOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: CMSG_SET_TAXI_BENCHMARK_MODE");
 
-    uint8 mode;
-    recvData >> mode;
+    UInt8Request request = ReadUInt8Request(recvData);
 
-    mode ? _player->SetFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_TAXI_BENCHMARK) : _player->RemoveFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_TAXI_BENCHMARK);
+    request.value ? _player->SetFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_TAXI_BENCHMARK) : _player->RemoveFlag(PLAYER_FIELD_PLAYER_FLAGS, PLAYER_FLAGS_TAXI_BENCHMARK);
 
-    SF_LOG_DEBUG("network", "Client used \"/timetest %d\" command", mode);
+    SF_LOG_DEBUG("network", "Client used \"/timetest %d\" command", request.value);
 }
 
 void WorldSession::HandleQueryInspectAchievements(WorldPacket& recvData)
 {
-    ObjectGuid guid;
+    GuidRequest request = ReadQueryInspectAchievementsRequest(recvData);
 
-    guid[2] = recvData.ReadBit();
-    guid[7] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
-    guid[5] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
-    guid[3] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[2]);
-    recvData.ReadByteSeq(guid[0]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[5]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[3]);
-
-    Player* player = ObjectAccessor::FindPlayer(guid);
+    Player* player = ObjectAccessor::FindPlayer(request.guid);
     if (!player)
     {
-        SF_LOG_DEBUG("network", "CMSG_QUERY_INSPECT_ACHIEVEMENTS: Inspected Player " UI64FMTD, (uint64)guid);
+        SF_LOG_DEBUG("network", "CMSG_QUERY_INSPECT_ACHIEVEMENTS: Inspected Player " UI64FMTD, (uint64)request.guid);
         return;
     }
 
@@ -1962,11 +2331,10 @@ void WorldSession::HandleQueryInspectAchievements(WorldPacket& recvData)
 
 void WorldSession::HandleGuildAchievementProgressQuery(WorldPacket& recvData)
 {
-    uint32 achievementId;
-    recvData >> achievementId;
+    UInt32Request request = ReadUInt32Request(recvData);
 
     if (Guild* guild = sGuildMgr->GetGuildById(_player->GetGuildId()))
-        guild->GetAchievementMgr().SendAchievementInfo(_player, achievementId);
+        guild->GetAchievementMgr().SendAchievementInfo(_player, request.value);
 }
 
 void WorldSession::HandleWorldStateUITimerUpdate(WorldPacket& /*recvData*/)
@@ -2041,11 +2409,9 @@ void WorldSession::HandleAreaSpiritHealerQueryOpcode(WorldPacket& recvData)
 
     Battleground* bg = _player->GetBattleground();
 
-    ObjectGuid guid;
-    recvData.ReadGuidMask(guid, 5, 6, 0, 4, 1, 2, 7, 3);
-    recvData.ReadGuidBytes(guid, 0, 2, 6, 7, 1, 5, 3, 4);
+    GuidRequest request = ReadAreaSpiritHealerQueryRequest(recvData);
 
-    Creature* unit = GetPlayer()->GetMap()->GetCreature(guid);
+    Creature* unit = GetPlayer()->GetMap()->GetCreature(request.guid);
     if (!unit)
         return;
 
@@ -2053,38 +2419,21 @@ void WorldSession::HandleAreaSpiritHealerQueryOpcode(WorldPacket& recvData)
         return;
 
     if (bg)
-        sBattlegroundMgr->SendAreaSpiritHealerQueryOpcode(_player, bg, guid);
+        sBattlegroundMgr->SendAreaSpiritHealerQueryOpcode(_player, bg, request.guid);
 
     if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(_player->GetZoneId()))
-        bf->SendAreaSpiritHealerQueryOpcode(_player, guid);
+        bf->SendAreaSpiritHealerQueryOpcode(_player, request.guid);
 }
 
 void WorldSession::HandleAreaSpiritHealerQueueOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: CMSG_AREA_SPIRIT_HEALER_QUEUE");
 
-    ObjectGuid guid;
     Battleground* bg = _player->GetBattleground();
 
-    guid[5] = recvData.ReadBit();
-    guid[4] = recvData.ReadBit();
-    guid[0] = recvData.ReadBit();
-    guid[2] = recvData.ReadBit();
-    guid[7] = recvData.ReadBit();
-    guid[1] = recvData.ReadBit();
-    guid[6] = recvData.ReadBit();
-    guid[3] = recvData.ReadBit();
+    GuidRequest request = ReadAreaSpiritHealerQueueRequest(recvData);
 
-    recvData.ReadByteSeq(guid[1]);
-    recvData.ReadByteSeq(guid[7]);
-    recvData.ReadByteSeq(guid[6]);
-    recvData.ReadByteSeq(guid[2]);
-    recvData.ReadByteSeq(guid[4]);
-    recvData.ReadByteSeq(guid[3]);
-    recvData.ReadByteSeq(guid[0]);
-    recvData.ReadByteSeq(guid[5]);
-
-    Creature* unit = GetPlayer()->GetMap()->GetCreature(guid);
+    Creature* unit = GetPlayer()->GetMap()->GetCreature(request.guid);
     if (!unit)
         return;
 
@@ -2092,10 +2441,10 @@ void WorldSession::HandleAreaSpiritHealerQueueOpcode(WorldPacket& recvData)
         return;
 
     if (bg)
-        bg->AddPlayerToResurrectQueue(guid, _player->GetGUID());
+        bg->AddPlayerToResurrectQueue(request.guid, _player->GetGUID());
 
     if (Battlefield* bf = sBattlefieldMgr->GetBattlefieldToZoneId(_player->GetZoneId()))
-        bf->AddPlayerToResurrectQueue(guid, _player->GetGUID());
+        bf->AddPlayerToResurrectQueue(request.guid, _player->GetGUID());
 }
 
 void WorldSession::HandleHearthAndResurrect(WorldPacket& /*recvData*/)
@@ -2120,7 +2469,7 @@ void WorldSession::HandleHearthAndResurrect(WorldPacket& /*recvData*/)
 
 void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)
 {
-    bool AcceptLock = recvPacket.ReadBit();
+    BoolRequest request = ReadInstanceLockResponseRequest(recvPacket);
 
     if (!_player->HasPendingBind())
     {
@@ -2129,7 +2478,7 @@ void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)
         return;
     }
 
-    if (AcceptLock)
+    if (request.value)
         _player->BindToInstance();
     else
         _player->RepopAtGraveyard();
@@ -2239,38 +2588,28 @@ void WorldSession::HandleUpdateMissileTrajectory(WorldPacket& recvPacket)
 {
     SF_LOG_DEBUG("network", "WORLD: CMSG_UPDATE_MISSILE_TRAJECTORY");
 
-    uint64 guid;
-    uint32 spellId;
-    float elevation, speed;
-    float curX, curY, curZ;
-    float targetX, targetY, targetZ;
-    uint8 moveStop;
+    UpdateMissileTrajectoryRequest request = ReadUpdateMissileTrajectoryRequest(recvPacket);
 
-    recvPacket >> guid >> spellId >> elevation >> speed;
-    recvPacket >> curX >> curY >> curZ;
-    recvPacket >> targetX >> targetY >> targetZ;
-    recvPacket >> moveStop;
-
-    Unit* caster = ObjectAccessor::GetUnit(*_player, guid);
+    Unit* caster = ObjectAccessor::GetUnit(*_player, request.guid);
     Spell* spell = caster ? caster->GetCurrentSpell(CURRENT_GENERIC_SPELL) : NULL;
-    if (!spell || spell->m_spellInfo->Id != spellId || !spell->m_targets.HasDst() || !spell->m_targets.HasSrc())
+    if (!spell || spell->m_spellInfo->Id != request.spellId || !spell->m_targets.HasDst() || !spell->m_targets.HasSrc())
     {
         recvPacket.rfinish();
         return;
     }
 
     Position pos = *spell->m_targets.GetSrcPos();
-    pos.Relocate(curX, curY, curZ);
+    pos.Relocate(request.curX, request.curY, request.curZ);
     spell->m_targets.ModSrc(pos);
 
     pos = *spell->m_targets.GetDstPos();
-    pos.Relocate(targetX, targetY, targetZ);
+    pos.Relocate(request.targetX, request.targetY, request.targetZ);
     spell->m_targets.ModDst(pos);
 
-    spell->m_targets.SetElevation(elevation);
-    spell->m_targets.SetSpeed(speed);
+    spell->m_targets.SetElevation(request.elevation);
+    spell->m_targets.SetSpeed(request.speed);
 
-    if (moveStop)
+    if (request.moveStop)
     {
         uint32 opcode;
         recvPacket >> opcode;
@@ -2281,36 +2620,17 @@ void WorldSession::HandleUpdateMissileTrajectory(WorldPacket& recvPacket)
 
 void WorldSession::HandleViolenceLevel(WorldPacket& recvPacket)
 {
-    uint8 violenceLevel;
-    recvPacket >> violenceLevel;
+    ReadUInt8Request(recvPacket);
 
     // do something?
 }
 
 void WorldSession::HandleObjectUpdateFailedOpcode(WorldPacket& recvPacket)
 {
-    ObjectGuid guid;
+    GuidRequest request = ReadObjectUpdateFailedRequest(recvPacket);
 
-    guid[3] = recvPacket.ReadBit();
-    guid[5] = recvPacket.ReadBit();
-    guid[6] = recvPacket.ReadBit();
-    guid[0] = recvPacket.ReadBit();
-    guid[1] = recvPacket.ReadBit();
-    guid[2] = recvPacket.ReadBit();
-    guid[7] = recvPacket.ReadBit();
-    guid[4] = recvPacket.ReadBit();
-
-    recvPacket.ReadByteSeq(guid[0]);
-    recvPacket.ReadByteSeq(guid[6]);
-    recvPacket.ReadByteSeq(guid[5]);
-    recvPacket.ReadByteSeq(guid[7]);
-    recvPacket.ReadByteSeq(guid[2]);
-    recvPacket.ReadByteSeq(guid[1]);
-    recvPacket.ReadByteSeq(guid[3]);
-    recvPacket.ReadByteSeq(guid[4]);
-
-    WorldObject* obj = ObjectAccessor::GetWorldObject(*GetPlayer(), guid);
-    SF_LOG_ERROR("network", "Object update failed for object " UI64FMTD " (%s) for player %s (%u)", uint64(guid), obj ? obj->GetName().c_str() : "object-not-found", GetPlayerName().c_str(), GetGuidLow());
+    WorldObject* obj = ObjectAccessor::GetWorldObject(*GetPlayer(), request.guid);
+    SF_LOG_ERROR("network", "Object update failed for object " UI64FMTD " (%s) for player %s (%u)", uint64(request.guid), obj ? obj->GetName().c_str() : "object-not-found", GetPlayerName().c_str(), GetGuidLow());
 
     // If create object failed for current player then client will be stuck on loading screen
     //if (_player->GetGUID() == guid)
@@ -2457,12 +2777,12 @@ void WorldSession::SendLoadCUFProfiles()
 
 void WorldSession::HandleSelectFactionOpcode(WorldPacket& recvPacket)
 {
-    uint32 choice = recvPacket.read<uint32>();
+    UInt32Request request = ReadUInt32Request(recvPacket);
 
     if (_player->getRace() != RACE_PANDAREN_NEUTRAL)
         return;
 
-    if (choice == JOIN_THE_HORDE)
+    if (request.value == JOIN_THE_HORDE)
     {
         _player->SetByteValue(UNIT_FIELD_SEX, 0, RACE_PANDAREN_HORDE);
         _player->setFactionForRace(RACE_PANDAREN_HORDE);
@@ -2473,7 +2793,7 @@ void WorldSession::HandleSelectFactionOpcode(WorldPacket& recvPacket)
         _player->learnSpell(669, false); // Language Orcish
         _player->learnSpell(108127, false); // Language Pandaren
     }
-    else if (choice == JOIN_THE_ALLIANCE)
+    else if (request.value == JOIN_THE_ALLIANCE)
     {
         _player->SetByteValue(UNIT_FIELD_SEX, 0, RACE_PANDAREN_ALLIANCE);
         _player->setFactionForRace(RACE_PANDAREN_ALLIANCE);
@@ -2495,10 +2815,7 @@ void WorldSession::HandleDiscardedTimeSyncAcks(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: CMSG_DISCARDED_TIME_SYNC_ACKS");
 
-    bool hasInfo = !recvData.ReadBit();
-
-    if (hasInfo)
-        recvData.read_skip<uint32>();
+    ReadDiscardedTimeSyncAcksRequest(recvData);
 }
 
 void WorldSession::SendPlayMusic(uint32 SoundKitID)
@@ -2519,12 +2836,8 @@ void WorldSession::SendPageText(ObjectGuid GameObjectGUID)
 void WorldSession::HandleSceneCompleted(WorldPacket& recvPacket)
 {
     SF_LOG_ERROR("network", "recv CMSG_SCENE_COMPLETED");
-    uint32 unk = 0;
-    uint8 unkbit = 0;
-    unkbit = recvPacket.ReadBit();
-    if (unkbit)
-        unk = recvPacket.read<uint32>();
-    SF_LOG_ERROR("network", "hasData %u", unkbit);
+    SceneCompletedRequest request = ReadSceneCompletedRequest(recvPacket);
+    SF_LOG_ERROR("network", "hasData %u", request.hasData);
 }
 
 void WorldSession::SendCrossedInebriationThreshold(ObjectGuid guid, uint32 ItemID, DrunkenState drunkenState)

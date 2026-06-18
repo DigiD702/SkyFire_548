@@ -17,6 +17,7 @@
 #include "ObjectAccessor.h"
 #include "ObjectDefines.h"
 #include "ObjectMgr.h"
+#include "ObjectAccessorLifecycle.h"
 #include "Opcodes.h"
 #include "Pet.h"
 #include "Player.h"
@@ -280,14 +281,21 @@ void ObjectAccessor::SaveAllPlayers()
 }
 void ObjectAccessor::AddUpdateObject(Object* obj)
 {
-    SF_SHARED_GUARD readGuard(i_objectLock);
-    i_objects.insert(obj);
+    SF_UNIQUE_GUARD writeGuard(i_objectLock);
+    Skyfire::ObjectAccess::ObjectUpdateQueueAddAction const action =
+        Skyfire::ObjectAccess::GetUpdateObjectQueueAddAction(i_objects.find(obj) != i_objects.end());
+    if (action == Skyfire::ObjectAccess::OBJECT_UPDATE_QUEUE_ADD_INSERT)
+        i_objects.insert(obj);
 }
 
 void ObjectAccessor::RemoveUpdateObject(Object* obj)
 {
-    SF_SHARED_GUARD readGuard(i_objectLock);
-    i_objects.erase(obj);
+    SF_UNIQUE_GUARD writeGuard(i_objectLock);
+    std::set<Object*>::iterator itr = i_objects.find(obj);
+    Skyfire::ObjectAccess::ObjectUpdateQueueRemoveAction const action =
+        Skyfire::ObjectAccess::GetUpdateObjectQueueRemoveAction(itr != i_objects.end());
+    if (action == Skyfire::ObjectAccess::OBJECT_UPDATE_QUEUE_REMOVE_ERASE)
+        i_objects.erase(itr);
 }
 
 Corpse* ObjectAccessor::GetCorpseForPlayerGUID(uint64 guid)
@@ -325,10 +333,16 @@ void ObjectAccessor::RemoveCorpse(Corpse* corpse)
 
     // Critical section
     {
-        SF_SHARED_GUARD writeGuard(i_corpseLock);
+        SF_UNIQUE_GUARD writeGuard(i_corpseLock);
         Player2CorpsesMapType::iterator iter = i_player2corpse.find(corpse->GetOwnerGUID());
-        if (iter == i_player2corpse.end()) /// @todo Fix this
+        Skyfire::ObjectAccess::ObjectCorpseOwnerRemoveAction const action =
+            Skyfire::ObjectAccess::GetCorpseOwnerMappingRemoveAction(iter != i_player2corpse.end());
+        if (action == Skyfire::ObjectAccess::OBJECT_CORPSE_OWNER_REMOVE_MISSING)
+        {
+            SF_LOG_ERROR("misc", "ObjectAccessor::RemoveCorpse: missing owner mapping for corpse %u owner %u after world removal.",
+                corpse->GetGUIDLow(), GUID_LOPART(corpse->GetOwnerGUID()));
             return;
+        }
 
         // build mapid*cellid -> guid_set map
         CellCoord cellCoord = Skyfire::ComputeCellCoord(corpse->GetPositionX(), corpse->GetPositionY());
@@ -344,9 +358,11 @@ void ObjectAccessor::AddCorpse(Corpse* corpse)
 
     // Critical section
     {
-        SF_SHARED_GUARD writeGuard(i_corpseLock);
+        SF_UNIQUE_GUARD writeGuard(i_corpseLock);
 
-        ASSERT(i_player2corpse.find(corpse->GetOwnerGUID()) == i_player2corpse.end());
+        Skyfire::ObjectAccess::ObjectCorpseOwnerAddAction const action =
+            Skyfire::ObjectAccess::GetCorpseOwnerMappingAddAction(i_player2corpse.find(corpse->GetOwnerGUID()) != i_player2corpse.end());
+        ASSERT(action == Skyfire::ObjectAccess::OBJECT_CORPSE_OWNER_ADD_INSERT);
         i_player2corpse[corpse->GetOwnerGUID()] = corpse;
 
         // build mapid*cellid -> guid_set map
@@ -462,11 +478,21 @@ void ObjectAccessor::Update(uint32 /*diff*/)
 {
     UpdateDataMapType update_players;
 
-    while (!i_objects.empty())
+    for (;;)
     {
-        Object* obj = *i_objects.begin();
-        ASSERT(obj && obj->IsInWorld());
-        i_objects.erase(i_objects.begin());
+        Object* obj = NULL;
+        {
+            SF_UNIQUE_GUARD writeGuard(i_objectLock);
+            Skyfire::ObjectAccess::ObjectUpdateQueueDrainAction const action =
+                Skyfire::ObjectAccess::GetUpdateObjectQueueDrainAction(i_objects.empty());
+            if (action == Skyfire::ObjectAccess::OBJECT_UPDATE_QUEUE_DRAIN_EMPTY)
+                break;
+
+            obj = *i_objects.begin();
+            i_objects.erase(i_objects.begin());
+        }
+
+        ASSERT(Skyfire::ObjectAccess::CanBuildUpdateForQueuedObject(obj != NULL, obj && obj->IsInWorld()));
         obj->BuildUpdate(update_players);
     }
 
@@ -481,11 +507,19 @@ void ObjectAccessor::Update(uint32 /*diff*/)
 
 void ObjectAccessor::UnloadAll()
 {
+    SF_UNIQUE_GUARD writeGuard(i_corpseLock);
+    Skyfire::ObjectAccess::ObjectCorpseStorageUnloadAction const action =
+        Skyfire::ObjectAccess::GetCorpseStorageUnloadAction(i_player2corpse.empty());
+    if (action == Skyfire::ObjectAccess::OBJECT_CORPSE_STORAGE_UNLOAD_EMPTY)
+        return;
+
     for (Player2CorpsesMapType::const_iterator itr = i_player2corpse.begin(); itr != i_player2corpse.end(); ++itr)
     {
         itr->second->RemoveFromWorld();
         delete itr->second;
     }
+
+    i_player2corpse.clear();
 }
 
 /// Define the static members of HashMapHolder

@@ -90,23 +90,7 @@ endif()
 
 if( WIN32 )
   if ( MSVC )
-    #add libcrypto dll to bin Folder
-    add_custom_command(TARGET authserver
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${OPENSSL_CRYPTO_DLL} ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
-    )
-
-    #add libssl dll to bin Folder
-    add_custom_command(TARGET authserver
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${OPENSSL_SSL_DLL} ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
-    )
-
-    #add mysql dll to bin folder
-    add_custom_command(TARGET authserver
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${MYSQL_DLL} ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
-    )
+    skyfire_copy_windows_runtime_dependencies(authserver)
     
     add_custom_command(TARGET authserver
       POST_BUILD
@@ -118,23 +102,8 @@ if( WIN32 )
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/authserver.conf.dist ${CMAKE_BINARY_DIR}/bin/
     )
   elseif(CMAKE_C_COMPILER_ID STREQUAL "Clang")
-    #add libcrypto dll to bin Folder
-    add_custom_command(TARGET authserver
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${OPENSSL_CRYPTO_DLL} ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
-    )
+    skyfire_copy_windows_runtime_dependencies(authserver)
 
-    #add libssl dll to bin Folder
-    add_custom_command(TARGET authserver
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${OPENSSL_SSL_DLL} ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
-    )
-
-    #add mysql dll to bin folder
-    add_custom_command(TARGET authserver
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${MYSQL_DLL} ${CMAKE_BINARY_DIR}/bin/
-    )
     add_custom_command(TARGET authserver
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/authserver.conf.dist ${CMAKE_BINARY_DIR}/bin/

@@ -19,24 +19,37 @@
 //==============================================================
 
 // The hatingUnit is not used yet
-float ThreatCalcHelper::calcThreat(Unit* hatedUnit, Unit* /*hatingUnit*/, float threat, SpellSchoolMask schoolMask, SpellInfo const* threatSpell)
+float ThreatCalcHelper::calcThreat(Unit* hatedUnit, Unit* /*hatingUnit*/, float threat, uint32 schoolMask, SpellInfo const* threatSpell)
 {
     if (threatSpell)
     {
+        float pctMod = 1.0f;
         if (SpellThreatEntry const* threatEntry = sSpellMgr->GetSpellThreatEntry(threatSpell->Id))
             if (threatEntry->pctMod != 1.0f)
-                threat *= threatEntry->pctMod;
+                pctMod = threatEntry->pctMod;
+
+        bool hasEnergizeEffect = false;
+        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; i++)
+        {
+            if (threatSpell->Effects[i].Effect == SPELL_EFFECT_ENERGIZE || threatSpell->Effects[i].ApplyAuraName == SPELL_AURA_PERIODIC_ENERGIZE)
+            {
+                hasEnergizeEffect = true;
+                break;
+            }
+        }
+
+        SpellThreatCalculation const calculation = ApplySpellThreatModifiers(threat, pctMod, hasEnergizeEffect);
+        threat = calculation.threat;
 
         // Energize is not affected by Mods
-        for (uint8 i = 0; i < MAX_SPELL_EFFECTS; i++)
-            if (threatSpell->Effects[i].Effect == SPELL_EFFECT_ENERGIZE || threatSpell->Effects[i].ApplyAuraName == SPELL_AURA_PERIODIC_ENERGIZE)
-                return threat;
+        if (calculation.ignoresUnitModifiers)
+            return threat;
 
         if (Player* modOwner = hatedUnit->GetSpellModOwner())
             modOwner->ApplySpellMod(threatSpell->Id, SPELLMOD_THREAT, threat);
     }
 
-    return hatedUnit->ApplyTotalThreatModifier(threat, schoolMask);
+    return hatedUnit->ApplyTotalThreatModifier(threat, SpellSchoolMask(schoolMask));
 }
 
 bool ThreatCalcHelper::isValidProcess(Unit* hatedUnit, Unit* hatingUnit, SpellInfo const* threatSpell)

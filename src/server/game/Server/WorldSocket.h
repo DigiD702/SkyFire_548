@@ -16,6 +16,7 @@
 #include "Common.h"
 #include "Platform/Threading.h"
 #include "SharedDefines.h"
+#include "WorldSocketSessionState.h"
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/system/error_code.hpp>
 #include <array>
@@ -81,6 +82,9 @@ public:
     /// Starts asynchronous socket processing.
     void Start(std::function<void(WorldSocket*)> closeHandler);
 
+    /// Detaches the owning world session when the session is being removed.
+    void DetachSession(WorldSession* session);
+
     /// Returns true when outgoing data is waiting to be flushed.
     bool HasPendingOutput(void) const;
 
@@ -125,11 +129,8 @@ private:
     /// Class used for managing encryption of the headers
     AuthCrypt m_Crypt;
 
-    /// Mutex lock to protect m_Session
-    LockType m_SessionLock;
-
     /// Session to which received packets are routed
-    WorldSession* m_Session;
+    WorldSocketSessionState m_SessionState;
 
     /// here are stored the fragments of the received data
     WorldPacket* m_RecvWPct;

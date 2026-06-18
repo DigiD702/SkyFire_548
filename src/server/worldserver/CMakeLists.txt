@@ -191,6 +191,8 @@ endif()
 
 if( WIN32 )
   if ( MSVC )
+    skyfire_copy_windows_runtime_dependencies(worldserver)
+
     add_custom_command(TARGET worldserver
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/worldserver.conf.dist ${CMAKE_BINARY_DIR}/bin/$(ConfigurationName)/
@@ -201,6 +203,8 @@ if( WIN32 )
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/worldserver.conf.dist ${CMAKE_BINARY_DIR}/bin/
     )
   elseif(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    skyfire_copy_windows_runtime_dependencies(worldserver)
+
     add_custom_command(TARGET worldserver
       POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/worldserver.conf.dist ${CMAKE_BINARY_DIR}/bin/

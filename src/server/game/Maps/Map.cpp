@@ -13,6 +13,7 @@
 #include "InstanceScript.h"
 #include "Map.h"
 #include "MapInstanced.h"
+#include "MapLifecycle.h"
 #include "MapManager.h"
 #include "MMapFactory.h"
 #include "ObjectAccessor.h"
@@ -494,8 +495,9 @@ void Map::InitializeObject(GameObject* obj)
 template<class T>
 bool Map::AddToMap(T* obj)
 {
-    /// @todo Needs clean up. An object should not be added to map twice.
-    if (obj->IsInWorld())
+    Skyfire::Maps::MapAddObjectAction action =
+        Skyfire::Maps::GetAddObjectAction(obj->IsInWorld(), true);
+    if (action == Skyfire::Maps::MAP_ADD_OBJECT_REFRESH_EXISTING)
     {
         ASSERT(obj->IsInGrid());
         obj->UpdateObjectVisibility(true);
@@ -507,7 +509,8 @@ bool Map::AddToMap(T* obj)
     //The correct way to fix it is to make AddToMap return false and delete the object if it is not added to grid
     //But now AddToMap is used in too many places, I will just see how many ASSERT failures it will cause
     ASSERT(cellCoord.IsCoordValid());
-    if (!cellCoord.IsCoordValid())
+    action = Skyfire::Maps::GetAddObjectAction(false, cellCoord.IsCoordValid());
+    if (action == Skyfire::Maps::MAP_ADD_OBJECT_REJECT_INVALID_COORDS)
     {
         SF_LOG_ERROR("maps", "Map::Add: Object " UI64FMTD " has invalid coordinates X:%f Y:%f grid cell [%u:%u]", obj->GetGUID(), obj->GetPositionX(), obj->GetPositionY(), cellCoord.x_coord, cellCoord.y_coord);
         return false; //Should delete object
@@ -541,12 +544,14 @@ bool Map::AddToMap(T* obj)
 template<>
 bool Map::AddToMap(Transport* obj)
 {
-    //TODO: Needs clean up. An object should not be added to map twice.
-    if (obj->IsInWorld())
+    Skyfire::Maps::MapAddObjectAction action =
+        Skyfire::Maps::GetAddObjectAction(obj->IsInWorld(), true);
+    if (action == Skyfire::Maps::MAP_ADD_OBJECT_REFRESH_EXISTING)
         return true;
 
     CellCoord cellCoord = Skyfire::ComputeCellCoord(obj->GetPositionX(), obj->GetPositionY());
-    if (!cellCoord.IsCoordValid())
+    action = Skyfire::Maps::GetAddObjectAction(false, cellCoord.IsCoordValid());
+    if (action == Skyfire::Maps::MAP_ADD_OBJECT_REJECT_INVALID_COORDS)
     {
         SF_LOG_ERROR("maps", "Map::Add: Object " UI64FMTD " has invalid coordinates X:%f Y:%f grid cell [%u:%u]", obj->GetGUID(), obj->GetPositionX(), obj->GetPositionY(), cellCoord.x_coord, cellCoord.y_coord);
         return false; //Should delete object
@@ -939,40 +944,38 @@ void Map::GameObjectRelocation(GameObject* go, float x, float y, float z, float 
 
 void Map::AddCreatureToMoveList(Creature* c, float x, float y, float z, float ang)
 {
-    if (_creatureToMoveLock) //can this happen?
+    Skyfire::Maps::MapMoveQueueAddAction const action =
+        Skyfire::Maps::GetMoveQueueAddAction(c->_moveState, _creatureToMoveLock);
+    if (action == Skyfire::Maps::MAP_MOVE_QUEUE_ADD_SKIPPED_LOCKED)
         return;
 
-    if (c->_moveState == MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE)
+    if (action == Skyfire::Maps::MAP_MOVE_QUEUE_ADD_APPEND)
         _creaturesToMove.push_back(c);
+
     c->SetNewCellPosition(x, y, z, ang);
 }
 
 void Map::RemoveCreatureFromMoveList(Creature* c)
 {
-    if (_creatureToMoveLock) //can this happen?
-        return;
-
-    if (c->_moveState == MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_ACTIVE)
-        c->_moveState = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_INACTIVE;
+    Skyfire::Maps::MarkMoveQueueEntryInactive(c->_moveState, _creatureToMoveLock);
 }
 
 void Map::AddGameObjectToMoveList(GameObject* go, float x, float y, float z, float ang)
 {
-    if (_gameObjectsToMoveLock) //can this happen?
+    Skyfire::Maps::MapMoveQueueAddAction const action =
+        Skyfire::Maps::GetMoveQueueAddAction(go->_moveState, _gameObjectsToMoveLock);
+    if (action == Skyfire::Maps::MAP_MOVE_QUEUE_ADD_SKIPPED_LOCKED)
         return;
 
-    if (go->_moveState == MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE)
+    if (action == Skyfire::Maps::MAP_MOVE_QUEUE_ADD_APPEND)
         _gameObjectsToMove.push_back(go);
+
     go->SetNewCellPosition(x, y, z, ang);
 }
 
 void Map::RemoveGameObjectFromMoveList(GameObject* go)
 {
-    if (_gameObjectsToMoveLock) //can this happen?
-        return;
-
-    if (go->_moveState == MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_ACTIVE)
-        go->_moveState = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_INACTIVE;
+    Skyfire::Maps::MarkMoveQueueEntryInactive(go->_moveState, _gameObjectsToMoveLock);
 }
 
 void Map::MoveAllCreaturesInMoveList()
@@ -984,13 +987,9 @@ void Map::MoveAllCreaturesInMoveList()
         if (c->FindMap() != this) //pet is teleported to another map
             continue;
 
-        if (c->_moveState != MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_ACTIVE)
-        {
-            c->_moveState = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE;
+        if (!Skyfire::Maps::ConsumeMoveQueueEntry(c->_moveState))
             continue;
-        }
 
-        c->_moveState = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE;
         if (!c->IsInWorld())
             continue;
 
@@ -1040,13 +1039,9 @@ void Map::MoveAllGameObjectsInMoveList()
         if (go->FindMap() != this) //transport is teleported to another map
             continue;
 
-        if (go->_moveState != MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_ACTIVE)
-        {
-            go->_moveState = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE;
+        if (!Skyfire::Maps::ConsumeMoveQueueEntry(go->_moveState))
             continue;
-        }
 
-        go->_moveState = MapObjectCellMoveState::MAP_OBJECT_CELL_MOVE_NONE;
         if (!go->IsInWorld())
             continue;
 
@@ -2368,22 +2363,33 @@ void Map::AddObjectToRemoveList(WorldObject* obj)
 
     obj->CleanupsBeforeDelete(false);                            // remove or simplify at least cross referenced links
 
-    i_objectsToRemove.insert(obj);
+    Skyfire::Maps::MapRemoveListAddAction const action =
+        Skyfire::Maps::GetRemoveListAddAction(i_objectsToRemove.find(obj) != i_objectsToRemove.end());
+    if (action == Skyfire::Maps::MAP_REMOVE_LIST_ADD_INSERT)
+        i_objectsToRemove.insert(obj);
+
     //SF_LOG_DEBUG("maps", "Object (GUID: %u TypeId: %u) added to removing list.", obj->GetGUIDLow(), obj->GetTypeId());
 }
 
 void Map::AddObjectToSwitchList(WorldObject* obj, bool on)
 {
     ASSERT(obj->GetMapId() == GetId() && obj->GetInstanceId() == GetInstanceId());
-    // i_objectsToSwitch is iterated only in Map::RemoveAllObjectsInRemoveList() and it uses
-    // the contained objects only if GetTypeId() == TYPEID_UNIT , so we can return in all other cases
-    if (obj->GetTypeId() != TypeID::TYPEID_UNIT && obj->GetTypeId() != TypeID::TYPEID_GAMEOBJECT)
+
+    bool const supportedObjectType = obj->GetTypeId() == TypeID::TYPEID_UNIT ||
+        obj->GetTypeId() == TypeID::TYPEID_GAMEOBJECT;
+    std::map<WorldObject*, bool>::iterator itr = i_objectsToSwitch.find(obj);
+    Skyfire::Maps::MapSwitchListAction const action = Skyfire::Maps::GetSwitchListAction(
+        supportedObjectType,
+        itr != i_objectsToSwitch.end(),
+        itr != i_objectsToSwitch.end() && itr->second,
+        on);
+
+    if (action == Skyfire::Maps::MAP_SWITCH_LIST_IGNORE_UNSUPPORTED_TYPE)
         return;
 
-    std::map<WorldObject*, bool>::iterator itr = i_objectsToSwitch.find(obj);
-    if (itr == i_objectsToSwitch.end())
+    if (action == Skyfire::Maps::MAP_SWITCH_LIST_INSERT)
         i_objectsToSwitch.insert(itr, std::make_pair(obj, on));
-    else if (itr->second != on)
+    else if (action == Skyfire::Maps::MAP_SWITCH_LIST_ERASE_OPPOSITE)
         i_objectsToSwitch.erase(itr);
     else
         ASSERT(false);

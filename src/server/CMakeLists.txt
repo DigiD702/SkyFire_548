@@ -18,6 +18,8 @@ if( SERVERS )
   add_subdirectory(authserver)
   add_subdirectory(scripts)
   add_subdirectory(worldserver)
+
+  skyfire_install_windows_runtime_dependencies()
 else()
   if( TOOLS )
     add_subdirectory(shared)

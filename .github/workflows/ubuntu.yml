@@ -1,12 +1,13 @@
 name: ubuntu-build
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ main, trunk, movement, boost_conversion ]
+    branches: [ main, trunk, movement, boost_conversion, game_refine, handler_refine, phase_5 ]
     paths-ignore:
       - 'sql/**'
   pull_request:
-    branches: [ main, trunk, movement, boost_conversion ]
+    branches: [ main, trunk, movement, boost_conversion, game_refine, handler_refine, phase_5 ]
     paths-ignore:
       - 'sql/**'
 
@@ -33,6 +34,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+
+    - name: Check game source tabs
+      shell: pwsh
+      run: ./tools/dev/game_metrics.ps1 -CheckNoTabs
 
     - name: Install Ubuntu dependencies
       shell: bash
@@ -123,7 +128,7 @@ jobs:
           ubuntu-ccache-${{ github.ref_name }}-
           ubuntu-ccache-
 
-    - name: Configure
+    - name: Configure with PCH
       shell: bash
       run: |
         set -euo pipefail
@@ -134,15 +139,23 @@ jobs:
           -DCMAKE_C_COMPILER_LAUNCHER=ccache \
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
           -DTOOLS=ON \
-          -DNOPCH=1 \
+          -DUSE_COREPCH=ON \
+          -DUSE_SCRIPTPCH=ON \
+          -DSKYFIRE_BUILD_TESTS=ON \
           -DBOOST_ROOT="$BOOST_ROOT" \
           -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT_DIR"
 
-    - name: Build
+    - name: Build with PCH
       shell: bash
       run: |
         set -euo pipefail
         cmake --build "$BUILD_DIR" --parallel "$(nproc)"
+
+    - name: Test
+      shell: bash
+      run: |
+        set -euo pipefail
+        ctest --test-dir "$BUILD_DIR" --output-on-failure
 
     - name: ccache stats
       if: always()

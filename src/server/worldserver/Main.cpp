@@ -9,7 +9,6 @@
 #pragma comment (lib, "Crypt32")
 #include <openssl/crypto.h>
 #include <openssl/opensslv.h>
-#include <openssl/provider.h>
 
 #include "Common.h"
 #include "Configuration/Config.h"
@@ -17,6 +16,7 @@
 
 #include "Log.h"
 #include "Master.h"
+#include "OpenSSLProviders.h"
 #include "World.h"
 
 #ifndef _SKYFIRE_CORE_CONFIG
@@ -272,23 +272,8 @@ extern int main(int argc, char** argv)
 
     SF_LOG_INFO("server.worldserver", "Using SSL version: %s (library: %s)", OPENSSL_VERSION_TEXT, SSLeay_version(SSLEAY_VERSION));
 
-    OSSL_PROVIDER *default_provider = OSSL_PROVIDER_try_load(NULL, "default", 1); 
-    OSSL_PROVIDER* legacy_provider = OSSL_PROVIDER_try_load(NULL, "legacy", 1);
-    
-    if (legacy_provider == NULL)
-    {
-        SF_LOG_INFO("server.worldserver", "Failed loading legacy provider, Try to load legacy provider again.");
-        legacy_provider = OSSL_PROVIDER_try_load(NULL, "legacy", 1);
-    }
-
-    SF_LOG_INFO("server.worldserver", "Loading default provider: (%s)", (default_provider == NULL || !OSSL_PROVIDER_available(NULL, "default")) ? "failed" : "succeeded");
-    SF_LOG_INFO("server.worldserver", "Loading legacy provider: (%s)", (legacy_provider == NULL || !OSSL_PROVIDER_available(NULL, "legacy")) ? "failed" : "succeeded");
-
-    // recheck 
-    if (legacy_provider == NULL)
+    if (!Skyfire::LoadOpenSSLProviders("server.worldserver"))
         return 1;
-
-    OSSL_PROVIDER_unload(legacy_provider);
 
     if (noUseConfigDatabaseInfo == true)
     {
