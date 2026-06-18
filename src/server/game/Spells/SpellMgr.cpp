@@ -3562,15 +3562,6 @@ void SpellMgr::LoadSpellInfoCorrections()
             case 108055: // Remove Weapon
                 spellInfo->Effects[EFFECT_1].TargetA = SpellImplicitTargetInfo(TARGET_UNIT_CASTER);
                 break;
-            case 92857: // Spying (Northshire Blackrock Spy)
-            case 93046: // Sneaking (Northshire Goblin Assassin)
-                spellInfo->Effects[EFFECT_0].Effect = SPELL_EFFECT_APPLY_AURA;
-                spellInfo->Effects[EFFECT_0].ApplyAuraName = SPELL_AURA_MOD_STEALTH;
-                spellInfo->Effects[EFFECT_0].BasePoints = 1;
-                spellInfo->Effects[EFFECT_0].MiscValue = 0;
-                spellInfo->Effects[EFFECT_0].TargetA = SpellImplicitTargetInfo(TARGET_UNIT_CASTER);
-                spellInfo->Effects[EFFECT_0].TargetB = SpellImplicitTargetInfo();
-                break;
             default:
                 break;
         }

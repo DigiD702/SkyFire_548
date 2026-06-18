@@ -663,6 +663,8 @@ void Player::RewardQuest(Quest const* quest, uint32 reward, Object* questGiver, 
         }
     }
 
+    TakeQuestSourceItem(quest_id, false);
+
     RemoveTimedQuest(quest_id);
 
     if (quest->GetRewardPackageItemId() > 0)
@@ -1323,38 +1325,36 @@ bool Player::GiveQuestSourceItem(Quest const* quest)
 bool Player::TakeQuestSourceItem(uint32 questId, bool msg)
 {
     Quest const* quest = sObjectMgr->GetQuestTemplate(questId);
-    if (quest)
+    if (!quest)
+        return true;
+
+    uint32 srcItemId = quest->GetSrcItemId();
+    if (!srcItemId)
+        return true;
+
+    ItemTemplate const* item = sObjectMgr->GetItemTemplate(srcItemId);
+    if (!item)
+        return true;
+
+    InventoryResult res = CanUnequipItems(srcItemId, QUEST_SOURCE_ITEM_COUNT);
+    if (res != EQUIP_ERR_OK)
     {
-        uint32 srcItemId = quest->GetSrcItemId();
-        ItemTemplate const* item = sObjectMgr->GetItemTemplate(srcItemId);
+        if (msg)
+            SendEquipError(res, NULL, NULL, srcItemId);
+        return false;
+    }
 
-        if (srcItemId > 0)
+    // Keep the item only when the quest was started from it and it is also a required objective.
+    if (item->StartQuest == questId && quest->GetQuestObjectiveCountType(QUEST_OBJECTIVE_TYPE_ITEM))
+    {
+        for (QuestObjectiveSet::const_iterator citr = quest->m_questObjectives.begin(); citr != quest->m_questObjectives.end(); ++citr)
         {
-            // exist two cases when destroy source quest item not possible:
-            // a) non un-equippable item (equipped non-empty bag, for example)
-            // b) when quest is started from an item and item also is needed in
-            // the end as RequiredItemId
-            InventoryResult res = CanUnequipItems(srcItemId, QUEST_SOURCE_ITEM_COUNT);
-            if (res != EQUIP_ERR_OK)
-            {
-                if (msg)
-                    SendEquipError(res, NULL, NULL, srcItemId);
-                return false;
-            }
-
-            if (!quest->GetQuestObjectiveCountType(QUEST_OBJECTIVE_TYPE_ITEM))
+            if (srcItemId == (*citr)->ObjectId)
                 return true;
-
-            bool destroyItem = true;
-            for (QuestObjectiveSet::const_iterator citr = quest->m_questObjectives.begin(); citr != quest->m_questObjectives.end(); ++citr)
-                if (item->StartQuest == questId && srcItemId == (*citr)->ObjectId)
-                    destroyItem = false;
-
-            if (destroyItem)
-                DestroyItemCount(srcItemId, QUEST_SOURCE_ITEM_COUNT, true, true);
         }
     }
 
+    DestroyItemCount(srcItemId, QUEST_SOURCE_ITEM_COUNT, true, true);
     return true;
 }
 

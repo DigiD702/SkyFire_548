@@ -51,28 +51,6 @@ enum ExtinguishingHopeData
     SPELL_VINEYARD_FIRE_DOUSED    = 80223
 };
 
-Position const BlackrockSpyPositions[9] =
-{
-    { -8868.88f, -99.1016f, 0.0f, 0.0f },
-    { -8936.5f,  -246.743f, 0.0f, 0.0f },
-    { -8922.44f, -73.9883f, 0.0f, 0.0f },
-    { -8909.68f, -40.0247f, 0.0f, 0.0f },
-    { -8834.85f, -119.701f, 0.0f, 0.0f },
-    { -9022.08f, -163.965f, 0.0f, 0.0f },
-    { -8776.55f, -79.158f,  0.0f, 0.0f },
-    { -8960.08f, -63.767f,  0.0f, 0.0f },
-    { -8983.12f, -202.827f, 0.0f, 0.0f }
-};
-
-bool IsBlackrockSpyPosition(Position const& home)
-{
-    for (uint8 i = 0; i < 9; ++i)
-        if (home.GetPositionX() == BlackrockSpyPositions[i].GetPositionX() && home.GetPositionY() == BlackrockSpyPositions[i].GetPositionY())
-            return true;
-
-    return false;
-}
-
 /*######
 ## npc_blackrock_spy
 ######*/
@@ -91,26 +69,52 @@ public:
     {
         npc_blackrock_spyAI(Creature* creature) : ScriptedAI(creature)
         {
-            UpdateStealthState();
+            CastSpying();
         }
 
-        void Reset() OVERRIDE
+        void CastSpying()
         {
-            UpdateStealthState();
+            GetCreature(-8868.88f, -99.1016f);
+            GetCreature(-8936.5f, -246.743f);
+            GetCreature(-8922.44f, -73.9883f);
+            GetCreature(-8909.68f, -40.0247f);
+            GetCreature(-8834.85f, -119.701f);
+            GetCreature(-9022.08f, -163.965f);
+            GetCreature(-8776.55f, -79.158f);
+            GetCreature(-8960.08f, -63.767f);
+            GetCreature(-8983.12f, -202.827f);
         }
 
-        void UpdateStealthState()
+        void GetCreature(float X, float Y)
         {
-            if (me->IsInCombat())
-                return;
+            if (me->GetHomePosition().GetPositionX() == X && me->GetHomePosition().GetPositionY() == Y)
+                if (!me->IsInCombat() && !me->HasAura(SPELL_SPYING))
+                    DoCast(me, SPELL_SPYING);
 
-            if (!me->HasAura(SPELL_SPYING))
-                DoCast(me, SPELL_SPYING);
+            CastSpyglass();
+        }
 
-            Position const home = me->GetHomePosition();
-            if (!IsBlackrockSpyPosition(home) && home.GetPositionX() == me->GetPositionX() && home.GetPositionY() == me->GetPositionY())
-                if (!me->HasAura(SPELL_SPYGLASS))
-                    DoCast(me, SPELL_SPYGLASS);
+        void CastSpyglass()
+        {
+            Spyglass(-8868.88f, -99.1016f, -8936.5f, -246.743f, -8922.44f, -73.9883f, -8909.68f, -40.0247f, -8834.85f,
+                -119.701f, -9022.08f, -163.965f, -8776.55f, -79.158f, -8960.08f, -63.767f, -8983.12f, -202.827f);
+        }
+
+        void Spyglass(float X1, float Y1, float X2, float Y2, float X3, float Y3, float X4, float Y4, float X5, float Y5,
+            float X6, float Y6, float X7, float Y7, float X8, float Y8, float X9, float Y9)
+        {
+            if ((me->GetHomePosition().GetPositionX() != X1 && me->GetHomePosition().GetPositionY() != Y1) &&
+             (me->GetHomePosition().GetPositionX() != X2 && me->GetHomePosition().GetPositionY() != Y2) &&
+             (me->GetHomePosition().GetPositionX() != X3 && me->GetHomePosition().GetPositionY() != Y3) &&
+             (me->GetHomePosition().GetPositionX() != X4 && me->GetHomePosition().GetPositionY() != Y4) &&
+             (me->GetHomePosition().GetPositionX() != X5 && me->GetHomePosition().GetPositionY() != Y5) &&
+             (me->GetHomePosition().GetPositionX() != X6 && me->GetHomePosition().GetPositionY() != Y6) &&
+             (me->GetHomePosition().GetPositionX() != X7 && me->GetHomePosition().GetPositionY() != Y7) &&
+             (me->GetHomePosition().GetPositionX() != X8 && me->GetHomePosition().GetPositionY() != Y8) &&
+             (me->GetHomePosition().GetPositionX() != X9 && me->GetHomePosition().GetPositionY() != Y9))
+                if (me->GetHomePosition().GetPositionX() == me->GetPositionX() && me->GetHomePosition().GetPositionY() == me->GetPositionY())
+                    if (!me->IsInCombat() && !me->HasAura(SPELL_SPYGLASS))
+                        DoCast(me, SPELL_SPYGLASS);
         }
 
         void EnterCombat(Unit* /*who*/) OVERRIDE
@@ -120,11 +124,10 @@ public:
 
         void UpdateAI(uint32 /*diff*/) OVERRIDE
         {
+            CastSpyglass();
+
             if (!UpdateVictim())
-            {
-                UpdateStealthState();
                 return;
-            }
 
             DoMeleeAttackIfReady();
         }
@@ -182,18 +185,8 @@ public:
     {
         npc_goblin_assassinAI(Creature* creature) : ScriptedAI(creature)
         {
-            UpdateStealthState();
-        }
-
-        void Reset() OVERRIDE
-        {
-            UpdateStealthState();
-        }
-
-        void UpdateStealthState()
-        {
-            if (!me->IsInCombat() && !me->HasAura(SPELL_SNEAKING))
-                DoCast(me, SPELL_SNEAKING);
+            if (!me->IsInCombat() && !me->HasAura(SPELL_SPYING))
+                DoCast(SPELL_SNEAKING);
         }
 
         void EnterCombat(Unit* /*who*/) OVERRIDE
@@ -204,10 +197,7 @@ public:
         void UpdateAI(uint32 /*diff*/) OVERRIDE
         {
             if (!UpdateVictim())
-            {
-                UpdateStealthState();
                 return;
-            }
 
             DoMeleeAttackIfReady();
         }
