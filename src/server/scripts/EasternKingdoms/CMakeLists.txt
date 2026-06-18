@@ -17,6 +17,12 @@ set(scripts_STAT_SRCS
   EasternKingdoms/BaradinHold/boss_occuthar.cpp
   EasternKingdoms/BaradinHold/boss_pit_lord_argaloth.cpp
   EasternKingdoms/BaradinHold/instance_baradin_hold.cpp
+  EasternKingdoms/Scholomance/scholomance.h
+  EasternKingdoms/Scholomance/instance_scholomance_mop.cpp
+  EasternKingdoms/Scholomance/boss_instructor_chillheart.cpp
+  EasternKingdoms/Scholomance/boss_jandice_barov_mop.cpp
+  EasternKingdoms/Scholomance/boss_lilian_voss.cpp
+  EasternKingdoms/Scholomance/boss_darkmaster_gandling_mop.cpp
   EasternKingdoms/BlackrockMountain/BlackrockDepths/boss_high_interrogator_gerstahn.cpp
   EasternKingdoms/BlackrockMountain/BlackrockDepths/boss_gorosh_the_dervish.cpp
   EasternKingdoms/BlackrockMountain/BlackrockDepths/blackrock_depths.cpp

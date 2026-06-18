@@ -88,6 +88,11 @@ void AddSC_boss_alizabal();                  //Baradin Hold
 void AddSC_boss_occuthar();
 void AddSC_boss_pit_lord_argaloth();
 void AddSC_instance_baradin_hold();
+void AddSC_instance_scholomance_mop();          //Scholomance (MoP)
+void AddSC_boss_instructor_chillheart();
+void AddSC_boss_jandice_barov_mop();
+void AddSC_boss_lilian_voss();
+void AddSC_boss_darkmaster_gandling_mop();
 void AddSC_blackrock_depths();               //Blackrock Depths
 void AddSC_boss_ambassador_flamelash();
 void AddSC_boss_anubshiah();
@@ -750,6 +755,11 @@ void AddEasternKingdomsScripts()
     AddSC_boss_occuthar();
     AddSC_boss_pit_lord_argaloth();
     AddSC_instance_baradin_hold();
+    AddSC_instance_scholomance_mop();          //Scholomance (MoP)
+    AddSC_boss_instructor_chillheart();
+    AddSC_boss_jandice_barov_mop();
+    AddSC_boss_lilian_voss();
+    AddSC_boss_darkmaster_gandling_mop();
     AddSC_blackrock_depths();               //Blackrock Depths
     AddSC_boss_ambassador_flamelash();
     AddSC_boss_anubshiah();

@@ -895,8 +895,9 @@ class spell_gen_chaos_blast : public SpellScriptLoader
 
 enum ChillheartWrackSoul
 {
-    SPELL_CHILLHEART_WRACK_SOUL_AOE = 111637,
-    SPELL_CHILLHEART_WRACK_SOUL     = 114658
+    SPELL_CHILLHEART_WRACK_SOUL_AURA = 111631,
+    SPELL_CHILLHEART_WRACK_SOUL_AOE  = 111637,
+    SPELL_CHILLHEART_WRACK_SOUL      = 114658
 };
 
 class spell_gen_chillheart_wrack_soul : public SpellScriptLoader
@@ -910,7 +911,8 @@ class spell_gen_chillheart_wrack_soul : public SpellScriptLoader
 
             bool Validate(SpellInfo const* /*spellInfo*/) OVERRIDE
             {
-                if (!sSpellMgr->GetSpellInfo(SPELL_CHILLHEART_WRACK_SOUL_AOE) ||
+                if (!sSpellMgr->GetSpellInfo(SPELL_CHILLHEART_WRACK_SOUL_AURA) ||
+                    !sSpellMgr->GetSpellInfo(SPELL_CHILLHEART_WRACK_SOUL_AOE) ||
                     !sSpellMgr->GetSpellInfo(SPELL_CHILLHEART_WRACK_SOUL))
                     return false;
                 return true;
@@ -918,9 +920,16 @@ class spell_gen_chillheart_wrack_soul : public SpellScriptLoader
 
             void HandleDummy(SpellEffIndex /*effIndex*/)
             {
-                if (Unit* target = GetHitUnit())
-                    if (!target->HasAura(111631))
-                        GetCaster()->CastSpell(target, SPELL_CHILLHEART_WRACK_SOUL, true);
+                Unit* caster = GetCaster();
+                Unit* target = GetHitUnit();
+                if (!caster || !target || target == caster)
+                    return;
+
+                if (target->GetTypeId() != TypeID::TYPEID_PLAYER)
+                    return;
+
+                if (!target->HasAura(SPELL_CHILLHEART_WRACK_SOUL_AURA))
+                    caster->CastSpell(target, SPELL_CHILLHEART_WRACK_SOUL, true);
             }
 
             void Register() OVERRIDE
