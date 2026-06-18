@@ -2288,7 +2288,12 @@ public:
             if (!injuredStormwindInfantry || !injuredStormwindInfantry->IsAlive())
                 return;
 
-            if (Player* playerCaster = caster->GetCharmerOrOwnerPlayerOrPlayerItself())
+            Player* playerCaster = caster->ToPlayer();
+            if (!playerCaster && GetSpell())
+                if (Unit* originalCaster = GetSpell()->GetOriginalCaster())
+                    playerCaster = originalCaster->GetCharmerOrOwnerPlayerOrPlayerItself();
+
+            if (playerCaster)
             {
                 injuredStormwindInfantry->SetCreatorGUID(playerCaster->GetGUID());
                 injuredStormwindInfantry->CastSpell(injuredStormwindInfantry, SPELL_RENEWED_LIFE, true, nullptr, nullptr, playerCaster->GetGUID());
