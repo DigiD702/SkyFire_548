@@ -349,7 +349,7 @@ bool ExtractSingleWmo(std::string& fname)
     if (rchr != NULL)
     {
         char cpy[4];
-        memcpy(cpy, rchr, sizeof(cpy));
+        strncpy((char*)cpy, rchr, 4);
         for (int i = 0; i < 4; ++i)
         {
             int m = cpy[i];
@@ -382,12 +382,11 @@ bool ExtractSingleWmo(std::string& fname)
     {
         for (uint32 i = 0; i < froot.nGroups; ++i)
         {
-            size_t baseLen = strlen(plain_name);
-            if (baseLen > 4)
-                baseLen -= 4;
-
+            char temp[1024];
+            strncpy(temp, fname.c_str(), 1024);
+            temp[fname.length()-4] = 0;
             char groupFileName[1024];
-            snprintf(groupFileName, sizeof(groupFileName), "%.*s_%03u.wmo", static_cast<int>(baseLen), plain_name, i);
+            snprintf(groupFileName, sizeof(groupFileName), "%s_%03u.wmo", temp, i);
             //printf("Trying to open groupfile %s\n",groupFileName);
 
             std::string s = groupFileName;
