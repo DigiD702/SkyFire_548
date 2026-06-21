@@ -126,7 +126,7 @@ bool LoadLocaleMPQFile(int locale)
 {
     TCHAR buff[1024];
     memset(buff, 0, sizeof(buff));
-    snprintf(buff, sizeof(buff), "%s%s/locale-%s.MPQ", input_path, LocalesT[locale], LocalesT[locale]);
+    _stprintf(buff, _T("%s%s/locale-%s.MPQ"), input_path, LocalesT[locale], LocalesT[locale]);
     if (!SFileOpenArchive(buff, 0, MPQ_OPEN_READ_ONLY, &LocaleMpq))
     {
         if (GetLastError() != ERROR_PATH_NOT_FOUND)
@@ -150,12 +150,12 @@ bool LoadLocaleMPQFile(int locale)
         if (Builds[i] > LAST_DBC_IN_DATA_BUILD)
         {
             prefix = "";
-            snprintf(buff, sizeof(buff), "%s%s/wow-update-%s-%u.MPQ", input_path, LocalesT[locale], LocalesT[locale], Builds[i]);
+            _stprintf(buff, _T("%s%s/wow-update-%s-%u.MPQ"), input_path, LocalesT[locale], LocalesT[locale], Builds[i]);
         }
         else
         {
             prefix = Locales[locale];
-            snprintf(buff, sizeof(buff), "%swow-update-base-%u.MPQ", input_path, Builds[i]);
+            _stprintf(buff, _T("%swow-update-base-%u.MPQ"), input_path, Builds[i]);
         }
 
         if (!SFileOpenPatchArchive(LocaleMpq, buff, prefix, 0))
@@ -173,7 +173,7 @@ bool LoadLocaleMPQFile(int locale)
 void LoadCommonMPQFiles(uint32 build)
 {
     TCHAR filename[1024];
-    snprintf(filename, sizeof(filename), "%sworld.MPQ", input_path);
+    _stprintf(filename, _T("%sworld.MPQ"), input_path);
     _tprintf(_T("Loading common MPQ files\n"));
     if (!SFileOpenArchive(filename, 0, MPQ_OPEN_READ_ONLY, &WorldMpq))
     {
@@ -188,7 +188,7 @@ void LoadCommonMPQFiles(uint32 build)
         if (build < 15211 && !strcmp("world2.MPQ", CONF_mpq_list[i]))   // 4.3.2 and higher MPQ
             continue;
 
-        snprintf(filename, sizeof(filename), "%s%s", input_path, CONF_mpq_list[i]);
+        _stprintf(filename, _T("%s%s"), input_path, CONF_mpq_list[i]);
         if (!SFileOpenPatchArchive(WorldMpq, filename, "", 0))
         {
             if (GetLastError() != ERROR_PATH_NOT_FOUND)
@@ -212,12 +212,12 @@ void LoadCommonMPQFiles(uint32 build)
         if (Builds[i] > LAST_DBC_IN_DATA_BUILD)
         {
             prefix = "";
-            snprintf(filename, sizeof(filename), "%swow-update-base-%u.MPQ", input_path, Builds[i]);
+            _stprintf(filename, _T("%swow-update-base-%u.MPQ"), input_path, Builds[i]);
         }
         else
         {
             prefix = "base";
-            snprintf(filename, sizeof(filename), "%swow-update-%u.MPQ", input_path, Builds[i]);
+            _stprintf(filename, _T("%swow-update-%u.MPQ"), input_path, Builds[i]);
         }
 
         if (!SFileOpenPatchArchive(WorldMpq, filename, prefix, 0))
@@ -266,7 +266,7 @@ bool ReadLiquidTypeTableDBC(int locale)
     snprintf(localMPQ, sizeof(localMPQ), "%smisc.MPQ", input_path);
     if (FileExists(localMPQ)==false)
     {   // Use misc.mpq
-        snprintf(localMPQ, sizeof(localMPQ), "%s/Data/%s/locale-%s.MPQ", input_path, LocalesT[locale], LocalesT[locale]);
+        snprintf(localMPQ, sizeof(localMPQ), "%s/Data/%s/locale-%s.MPQ", input_path, Locales[locale], Locales[locale]);
     }
     
     if (!SFileOpenArchive(localMPQ, 0, MPQ_OPEN_READ_ONLY, &localeFile))
