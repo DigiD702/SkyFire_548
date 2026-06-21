@@ -459,10 +459,10 @@ namespace Database
         bool requiredBaseSqlExists, std::vector<SqlUpdateFile> const& updates)
     {
         SetupPlan plan = BuildDatabaseSetupPlan(options, state, true, updates);
-        if (!plan.IsValid() || !plan.ShouldInstallBase)
+        if (!plan.IsValid())
             return plan;
 
-        if (options.ExternalBaseFile.empty() || !externalBaseSqlExists)
+        if (plan.ShouldInstallBase && (options.ExternalBaseFile.empty() || !externalBaseSqlExists))
         {
             plan.Error = "world database external base SQL file was not found.";
             return plan;

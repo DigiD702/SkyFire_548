@@ -19,7 +19,7 @@ BEGIN
   DECLARE sngHPInc           FLOAT DEFAULT 0.001;    
   DECLARE sngManaInc         FLOAT DEFAULT 0.001;    
   DECLARE intStartLvl        INT   DEFAULT 80;      
-  DECLARE intFinishLvl       INT   DEFAULT 85;     
+  DECLARE intFinishLvl       INT   DEFAULT 90;
   
   DECLARE intRecordDone      INT   DEFAULT 0;
   DECLARE intClass           INT   DEFAULT 0;
@@ -74,7 +74,7 @@ BEGIN
   DECLARE intMaxStats        INT   DEFAULT 2556541;    
   DECLARE sngStatsInc        FLOAT DEFAULT 0.00000000001;    
   DECLARE intStartLvl        INT   DEFAULT 80;      
-  DECLARE intFinishLvl       INT   DEFAULT 85;     
+  DECLARE intFinishLvl       INT   DEFAULT 90;
   
   DECLARE intRecordDone      INT   DEFAULT 0;
   DECLARE intRace            INT   DEFAULT 0;
@@ -659,7 +659,7 @@ DECLARE max_phase_mask INT;
 DECLARE phase_yes INT;
 DECLARE inverse_phase_mask INT;
 CALL `sp_eai_table_phase_mask`();
-CALL `sp_set_entry_list`(phase_list);
+CALL `sp_set_entry_list`(phase_list, NULL);
 SET max_phase_mask = (SELECT SUM(phase_mask) FROM phase_mask WHERE phaseID <= max_phase);
 SET phase_yes = (SELECT SUM(phase_mask) FROM phase_mask WHERE phaseID IN (SELECT `value` FROM tdb_entry_list));
 SET inverse_phase_mask = (max_phase_mask - phase_yes);
@@ -916,7 +916,7 @@ BEGIN
   DECLARE sngArmorInc    FLOAT DEFAULT 0.05;    
   DECLARE sngStatsInc    FLOAT DEFAULT 0.015;    
   DECLARE intStartLvl    INT   DEFAULT 80;      
-  DECLARE intFinishLvl   INT   DEFAULT 85;      
+  DECLARE intFinishLvl   INT   DEFAULT 90;
   
   DECLARE intRecordDone  INT   DEFAULT 0;
   DECLARE intCreature    INT   DEFAULT 0;
@@ -1046,24 +1046,16 @@ END */;;
 BEGIN
 DECLARE remaining INT;
 DECLARE min_entry INT;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(item_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 WHILE remaining > 0 DO
 SET min_entry = (SELECT MIN(`value`) FROM tdb_entry_list);
 CALL sp_error_entry('ITEM',min_entry);
+UPDATE item_template SET minMoneyLoot=min_money, maxMoneyLoot=max_money WHERE entry = min_entry;
 DELETE FROM tdb_entry_list WHERE `value`=min_entry;
 SET remaining = remaining -1;
 END WHILE;
-CALL sp_set_entry_list(npc_entry);
-SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
-CALL sp_set_entry_list(npc_entry);
-SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
-WHILE remaining > 0 DO
-SET min_entry = (SELECT MIN(`value`) FROM tdb_entry_list);
-UPDATE item_template SET minMoneyLoot=min_money, maxMoneyLoot=max_money WHERE entry = item_entry;
-DELETE FROM tdb_entry_list WHERE `value`=min_entry;
-SET remaining = remaining -1;
-END WHILE;
+DROP TABLE `tdb_entry_list`;
 END */;;
 /*!50003 SET SESSION SQL_MODE=@OLD_SQL_MODE*/;;
 /*!50003 DROP PROCEDURE IF EXISTS `sp_set_npc_aggro` */;;
@@ -1110,7 +1102,7 @@ END */;;
 BEGIN
 DECLARE remaining INT;
 DECLARE min_entry INT;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 WHILE remaining > 0 DO
 SET min_entry = (SELECT MIN(`value`) FROM tdb_entry_list);
@@ -1118,7 +1110,7 @@ CALL sp_error_entry('NPC',min_entry);
 DELETE FROM tdb_entry_list WHERE `value`=min_entry;
 SET remaining = remaining -1;
 END WHILE;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 IF on_off = 1 THEN
 WHILE remaining > 0 DO
@@ -1157,7 +1149,7 @@ BEGIN
   
 DECLARE remaining INT;
 DECLARE min_entry INT;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 WHILE remaining > 0 DO
 SET min_entry = (SELECT MIN(`value`) FROM tdb_entry_list);
@@ -1165,9 +1157,9 @@ CALL sp_error_entry('NPC',min_entry);
 DELETE FROM tdb_entry_list WHERE `value`=min_entry;
 SET remaining = remaining -1;
 END WHILE;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 WHILE remaining > 0 DO
 SET min_entry = (SELECT MIN(`value`) FROM tdb_entry_list);
@@ -1175,7 +1167,7 @@ CALL sp_error_entry('NPC',min_entry);
 DELETE FROM tdb_entry_list WHERE `value`=min_entry;
 SET remaining = remaining -1;
 END WHILE;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 IF on_off = 1 THEN
 WHILE remaining > 0 DO
@@ -1249,7 +1241,7 @@ BEGIN
   
 DECLARE remaining INT;
 DECLARE min_entry INT;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 WHILE remaining > 0 DO
 SET min_entry = (SELECT MIN(`value`) FROM tdb_entry_list);
@@ -1257,9 +1249,9 @@ CALL sp_error_entry('NPC',min_entry);
 DELETE FROM tdb_entry_list WHERE `value`=min_entry;
 SET remaining = remaining -1;
 END WHILE;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 WHILE remaining > 0 DO
 SET min_entry = (SELECT MIN(`value`) FROM tdb_entry_list);
@@ -1267,7 +1259,7 @@ CALL sp_error_entry('NPC',min_entry);
 DELETE FROM tdb_entry_list WHERE `value`=min_entry;
 SET remaining = remaining -1;
 END WHILE;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 IF on_off = 1 THEN
 WHILE remaining > 0 DO
@@ -1373,7 +1365,7 @@ BEGIN
   
 DECLARE remaining INT;
 DECLARE min_entry INT;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 WHILE remaining > 0 DO
 SET min_entry = (SELECT MIN(`value`) FROM tdb_entry_list);
@@ -1381,9 +1373,9 @@ CALL sp_error_entry('NPC',min_entry);
 DELETE FROM tdb_entry_list WHERE `value`=min_entry;
 SET remaining = remaining -1;
 END WHILE;
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
-CALL sp_set_entry_list(npc_entry);
+CALL sp_set_entry_list(npc_entry, NULL);
 SET remaining = (SELECT COUNT(`value`) FROM tdb_entry_list);
 IF on_off = 1 THEN
 WHILE remaining > 0 DO

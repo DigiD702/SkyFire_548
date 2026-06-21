@@ -249,6 +249,26 @@ namespace
         return passed;
     }
 
+    bool TestExistingWorldDatabaseRequiresStoredProcedures()
+    {
+        Skyfire::Database::SetupOptions options =
+            Skyfire::Database::MakeWorldDatabaseSetupOptions(true, false, "sql", "");
+
+        Skyfire::Database::SetupState state;
+        state.DatabaseExists = true;
+        state.SchemaTableCount = 1200;
+        state.UpdateTrackingExists = true;
+
+        Skyfire::Database::SetupPlan plan =
+            Skyfire::Database::BuildWorldDatabaseSetupPlan(options, state, false, false, {});
+
+        bool passed = true;
+        passed &= Expect(!plan.IsValid(), "Existing world database setup should require stored procedures");
+        passed &= Expect(!plan.Error.empty(), "Missing stored procedures should explain why setup stopped");
+
+        return passed;
+    }
+
     bool TestExistingAuthDatabaseSkipsAppliedUpdates()
     {
         Skyfire::Database::SetupOptions options = Skyfire::Database::MakeAuthDatabaseSetupOptions(true, false, "sql");
@@ -516,6 +536,7 @@ int main()
     passed &= TestEmptyCharacterDatabaseInstallsBase();
     passed &= TestEmptyWorldDatabaseRequiresExternalBase();
     passed &= TestEmptyWorldDatabaseRequiresStoredProcedures();
+    passed &= TestExistingWorldDatabaseRequiresStoredProcedures();
     passed &= TestExistingAuthDatabaseSkipsAppliedUpdates();
     passed &= TestExistingAuthDatabaseRejectsChangedAppliedUpdate();
     passed &= TestExistingAuthDatabaseWithoutTrackingFailsSafe();

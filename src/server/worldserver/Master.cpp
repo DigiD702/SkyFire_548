@@ -649,16 +649,16 @@ namespace
             if (!ExecuteSqlFile(setupConnection.get(), externalBaseSqlPath, baseSql,
                 "Failed while executing world setup SQL"))
                 return false;
+        }
 
-            for (std::filesystem::path const& requiredBaseSqlPath : requiredBaseSqlPaths)
-            {
-                std::string requiredBaseSql;
-                SF_LOG_INFO("server.worldserver", "Installing world database required SQL from %s.",
-                    requiredBaseSqlPath.string().c_str());
-                if (!ExecuteSqlFile(setupConnection.get(), requiredBaseSqlPath, requiredBaseSql,
-                    "Failed while executing world setup SQL"))
-                    return false;
-            }
+        for (std::filesystem::path const& requiredBaseSqlPath : requiredBaseSqlPaths)
+        {
+            std::string requiredBaseSql;
+            SF_LOG_INFO("server.worldserver", "Applying world database required SQL from %s.",
+                requiredBaseSqlPath.string().c_str());
+            if (!ExecuteSqlFile(setupConnection.get(), requiredBaseSqlPath, requiredBaseSql,
+                "Failed while executing world setup SQL"))
+                return false;
         }
 
         if (!EnsureDatabaseUpdateTrackingTable(setupConnection.get(),
