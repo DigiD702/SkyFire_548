@@ -1,0 +1,60 @@
+sf_test_world.areatrigger_tavern comparison report
+Generated: 2026-06-22 16:48:01 -05:00
+
+Source table: reference areatrigger_tavern data
+Target table: sf_test_world.areatrigger_tavern
+Comparison key: id
+
+Schema checked:
+  id   mediumint unsigned NOT NULL PRIMARY KEY DEFAULT 0
+  name text NULL DEFAULT NULL
+
+Row counts:
+  reference areatrigger_tavern data: 183
+  sf_test_world.areatrigger_tavern: 176
+
+Summary:
+  Rows present in reference data but missing from sf_test_world: 11
+  Rows present in sf_test_world but not in reference data: 4
+
+Missing from sf_test_world:
+
+id    name
+----  -------------------------------------------------------
+262   Razorfen Kraul
+2746  Stormwind City
+4502  Old Hillsbrad Foothills, behind Inn
+4529  Shadowmoon Valley, Wildhammer Stronghold, Inn bedroom
+4786  4786
+4933  4933
+4990  4990
+5140  5140
+5360  Grom'arsh Crash-Site
+5565  5565
+5628  5628
+
+Rows only in sf_test_world:
+
+id    name
+----  -------------------------------------------------------
+7983  Jade Temple Grounds - Inn
+8107  Dawnchaser Retreat - Inn
+8442  Tavern in the Mists - Inn
+8579  Honeydew Village - Inn
+
+Optional SQL to add only the missing reference rows to sf_test_world:
+
+INSERT INTO `areatrigger_tavern` (`id`, `name`) VALUES
+(262, 'Razorfen Kraul'),
+(2746, 'Stormwind City'),
+(4502, 'Old Hillsbrad Foothills, behind Inn'),
+(4529, 'Shadowmoon Valley, Wildhammer Stronghold, Inn bedroom'),
+(4786, '4786'),
+(4933, '4933'),
+(4990, '4990'),
+(5140, '5140'),
+(5360, 'Grom''arsh Crash-Site'),
+(5565, '5565'),
+(5628, '5628');
+
+No database changes were made by this comparison.
