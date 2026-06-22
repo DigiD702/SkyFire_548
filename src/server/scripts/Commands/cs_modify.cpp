@@ -1323,12 +1323,20 @@ public:
             return false;
         }
 
-        uint32 currencyId = atoi(strtok((char*)args, " "));
+        char* currencyIdStr = strtok((char*)args, " ");
+        if (!currencyIdStr)
+            return false;
+
+        uint32 currencyId = atoi(currencyIdStr);
         const CurrencyTypesEntry* currencyType = sCurrencyTypesStore.LookupEntry(currencyId);
         if (!currencyType)
             return false;
 
-        uint32 amount = atoi(strtok(NULL, " "));
+        char* amountStr = strtok(NULL, " ");
+        if (!amountStr)
+            return false;
+
+        uint32 amount = atoi(amountStr);
         if (!amount)
             return false;
 

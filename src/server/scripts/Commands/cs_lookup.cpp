@@ -1200,7 +1200,11 @@ public:
         if (!*args)
             return false;
 
-        std::string account = strtok((char*)args, " ");
+        char* accountStr = strtok((char*)args, " ");
+        if (!accountStr)
+            return false;
+
+        std::string account = accountStr;
         char* limitStr = strtok(NULL, " ");
         int32 limit = limitStr ? atoi(limitStr) : -1;
 
@@ -1220,7 +1224,11 @@ public:
         if (!*args)
             return false;
 
-        std::string email = strtok((char*)args, " ");
+        char* emailStr = strtok((char*)args, " ");
+        if (!emailStr)
+            return false;
+
+        std::string email = emailStr;
         char* limitStr = strtok(NULL, " ");
         int32 limit = limitStr ? atoi(limitStr) : -1;
 

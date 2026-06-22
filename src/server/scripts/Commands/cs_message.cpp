@@ -174,7 +174,11 @@ public:
             return true;
         }
 
-        std::string argStr = strtok((char*)args, " ");
+        char* arg = strtok((char*)args, " ");
+        if (!arg)
+            return false;
+
+        std::string argStr = arg;
         // whisper on
         if (argStr == "on")
         {
@@ -195,7 +199,11 @@ public:
 
         if (argStr == "remove")
         {
-            std::string name = strtok(NULL, " ");
+            char* nameStr = strtok(NULL, " ");
+            if (!nameStr)
+                return false;
+
+            std::string name = nameStr;
             if (normalizePlayerName(name))
             {
                 if (Player* player = sObjectAccessor->FindPlayerByName(name))

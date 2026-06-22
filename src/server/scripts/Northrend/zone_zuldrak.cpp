@@ -79,12 +79,16 @@ public:
         {
             if (spell->Id == SPELL_UNLOCK_SHACKLE)
             {
-                if (caster->ToPlayer()->GetQuestStatus(QUEST_TROLLS_IS_GONE_CRAZY) == QUEST_STATUS_INCOMPLETE)
+                Player* player = caster->ToPlayer();
+                if (!player)
+                    return;
+
+                if (player->GetQuestStatus(QUEST_TROLLS_IS_GONE_CRAZY) == QUEST_STATUS_INCOMPLETE)
                 {
                     if (Creature* rageclaw = Unit::GetCreature(*me, _rageclawGUID))
                     {
                         UnlockRageclaw(caster);
-                        caster->ToPlayer()->KilledMonster(rageclaw->GetCreatureTemplate(), _rageclawGUID);
+                        player->KilledMonster(rageclaw->GetCreatureTemplate(), _rageclawGUID);
                         me->DespawnOrUnsummon();
                     }
                     else

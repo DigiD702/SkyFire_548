@@ -412,9 +412,13 @@ public:
 
         void OnSpellClick(Unit* Clicker, bool& /*result*/) OVERRIDE
         {
+            Player* player = Clicker->ToPlayer();
+            if (!player)
+                return;
+
             if (Creature* vehicle = me->SummonCreature(55649, me->GetHomePosition(), TempSummonType::TEMPSUMMON_MANUAL_DESPAWN, 500000))
             {
-                Clicker->ToPlayer()->EnterVehicle(vehicle, 0);
+                player->EnterVehicle(vehicle, 0);
 
                 if (Creature* ji = me->SummonCreature(56663, me->GetHomePosition(), TempSummonType::TEMPSUMMON_MANUAL_DESPAWN, 500000))
                 {
