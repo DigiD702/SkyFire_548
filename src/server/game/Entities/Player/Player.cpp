@@ -9183,10 +9183,25 @@ void Player::SendLootRelease(ObjectGuid guid)
     SendDirectMessage(&data);
 }
 
-void Player::SendLoot(uint64 guid, LootType loot_type)
+void Player::RemoveLootedObject(uint64 guid)
 {
-    if (uint64 lguid = GetLootGUID())
-        m_session->DoLootRelease(lguid);
+    m_lootView.erase(guid);
+}
+
+void Player::SendLoot(uint64 guid, LootType loot_type, bool isAoE)
+{
+    if (!isAoE)
+    {
+        std::vector<uint64> lootGuids(m_lootView.begin(), m_lootView.end());
+        if (lootGuids.empty())
+            if (uint64 lguid = GetLootGUID())
+                lootGuids.push_back(lguid);
+
+        for (std::vector<uint64>::const_iterator itr = lootGuids.begin(); itr != lootGuids.end(); ++itr)
+            m_session->DoLootRelease(*itr);
+
+        m_lootView.clear();
+    }
 
     Loot* loot = 0;
     PermissionTypes permission = PermissionTypes::ALL_PERMISSION;
@@ -9369,7 +9384,7 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
         Creature* creature = GetMap()->GetCreature(guid);
 
         // must be in range and creature must be alive for pickpocket and must be dead for another loot
-        if (!creature || creature->IsAlive() != (loot_type == LootType::LOOT_PICKPOCKETING) || !creature->IsWithinDistInMap(this, INTERACTION_DISTANCE))
+        if (!creature || creature->IsAlive() != (loot_type == LootType::LOOT_PICKPOCKETING) || (!creature->IsWithinDistInMap(this, INTERACTION_DISTANCE) && !isAoE))
         {
             SendLootRelease(guid);
             return;
@@ -9474,7 +9489,8 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
         }
     }
 
-    SetLootGUID(guid);
+    if (!isAoE)
+        SetLootGUID(guid);
 
     // LOOT_INSIGNIA and LOOT_FISHINGHOLE unsupported by client
     switch (loot_type)
@@ -9488,21 +9504,22 @@ void Player::SendLoot(uint64 guid, LootType loot_type)
     loot->loot_type = loot_type;
 
     WorldPacket data(SMSG_LOOT_RESPONSE, 8 + 1 + 50 + 1 + 1);           // we guess size
-    LootView(*loot, this, permission).WriteData(guid, loot_type, &data);
+    LootView(*loot, this, permission).WriteData(guid, loot_type, &data, isAoE);
     SendDirectMessage(&data);
 
     // add 'this' player as one of the players that are looting 'loot'
     if (permission != PermissionTypes::NONE_PERMISSION)
+    {
         loot->AddLooter(GetGUID());
+        AddLootedObject(guid);
+    }
 
     if (loot_type == LootType::LOOT_CORPSE && !IS_ITEM_GUID(guid))
         SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_LOOTING);
 }
 
-void Player::SendNotifyLootMoneyRemoved()
+void Player::SendNotifyLootMoneyRemoved(ObjectGuid guid)
 {
-    ObjectGuid guid = GetLootGUID();
-
     WorldPacket data(SMSG_LOOT_CLEAR_MONEY, 9);
     data.WriteBit(guid[6]);
     data.WriteBit(guid[0]);
@@ -20461,8 +20478,11 @@ void Player::AutoStoreLoot(uint8 bag, uint8 slot, uint32 loot_id, LootStore cons
     }
 }
 
-void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
+void Player::StoreLootItem(uint8 lootSlot, Loot* loot, uint64 lootGuid)
 {
+    if (!lootGuid)
+        lootGuid = GetLootGUID();
+
     QuestItem* qitem = NULL;
     QuestItem* ffaitem = NULL;
     QuestItem* conditem = NULL;
@@ -20478,7 +20498,7 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
     // questitems use the blocked field for other purposes
     if (!qitem && item->is_blocked)
     {
-        SendLootRelease(GetLootGUID());
+        SendLootRelease(lootGuid);
         return;
     }
 
@@ -20494,9 +20514,9 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
             qitem->is_looted = true;
             //freeforall is 1 if everyone's supposed to get the quest item.
             if (item->freeforall || loot->GetPlayerQuestItems().size() == 1)
-                SendNotifyLootItemRemoved(lootSlot, GetLootGUID());
+                SendNotifyLootItemRemoved(lootSlot, lootGuid);
             else
-                loot->NotifyQuestItemRemoved(qitem->index);
+                loot->NotifyQuestItemRemoved(qitem->index, lootGuid);
         }
         else
         {
@@ -20504,14 +20524,14 @@ void Player::StoreLootItem(uint8 lootSlot, Loot* loot)
             {
                 //freeforall case, notify only one player of the removal
                 ffaitem->is_looted = true;
-                SendNotifyLootItemRemoved(lootSlot, GetLootGUID());
+                SendNotifyLootItemRemoved(lootSlot, lootGuid);
             }
             else
             {
                 //not freeforall, notify everyone
                 if (conditem)
                     conditem->is_looted = true;
-                loot->NotifyItemRemoved(lootSlot);
+                loot->NotifyItemRemoved(lootSlot, lootGuid);
             }
         }
 

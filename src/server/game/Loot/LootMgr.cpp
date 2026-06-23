@@ -596,7 +596,7 @@ QuestItemList* Loot::FillNonQuestNonFFAConditionalLoot(Player* player, bool pres
 
 //===================================================
 
-void Loot::NotifyItemRemoved(uint8 lootIndex)
+void Loot::NotifyItemRemoved(uint8 lootIndex, ObjectGuid lootGuid)
 {
     // notify all players that are looting this that the item was removed
     // convert the index to the slot the player sees
@@ -606,13 +606,16 @@ void Loot::NotifyItemRemoved(uint8 lootIndex)
         i_next = i;
         ++i_next;
         if (Player* player = ObjectAccessor::FindPlayer(*i))
-            player->SendNotifyLootItemRemoved(lootIndex, player->GetLootGUID());
+        {
+            uint64 notifyGuid = uint64(lootGuid) ? uint64(lootGuid) : player->GetLootGUID();
+            player->SendNotifyLootItemRemoved(lootIndex, notifyGuid);
+        }
         else
             PlayersLooting.erase(i);
     }
 }
 
-void Loot::NotifyMoneyRemoved()
+void Loot::NotifyMoneyRemoved(ObjectGuid lootGuid)
 {
     // notify all players that are looting this that the money was removed
     std::set<uint64>::iterator i_next;
@@ -621,13 +624,16 @@ void Loot::NotifyMoneyRemoved()
         i_next = i;
         ++i_next;
         if (Player* player = ObjectAccessor::FindPlayer(*i))
-            player->SendNotifyLootMoneyRemoved();
+        {
+            uint64 notifyGuid = uint64(lootGuid) ? uint64(lootGuid) : player->GetLootGUID();
+            player->SendNotifyLootMoneyRemoved(notifyGuid);
+        }
         else
             PlayersLooting.erase(i);
     }
 }
 
-void Loot::NotifyQuestItemRemoved(uint8 questIndex)
+void Loot::NotifyQuestItemRemoved(uint8 questIndex, ObjectGuid lootGuid)
 {
     // when a free for all questitem is looted
     // all players will get notified of it being removed
@@ -653,7 +659,10 @@ void Loot::NotifyQuestItemRemoved(uint8 questIndex)
                         break;
 
                 if (j < pql.size())
-                    player->SendNotifyLootItemRemoved(items.size() + j, player->GetLootGUID());
+                {
+                    uint64 notifyGuid = uint64(lootGuid) ? uint64(lootGuid) : player->GetLootGUID();
+                    player->SendNotifyLootItemRemoved(items.size() + j, notifyGuid);
+                }
             }
         }
         else
@@ -854,9 +863,9 @@ void LootItem::WriteBasicDataPart(LootSlotType SlotType, uint8 slot, ByteBuffer*
     *buff << uint32(sObjectMgr->GetItemTemplate(itemid)->DisplayInfoID);
 }
 
-void LootView::WriteData(ObjectGuid guid, LootType lootType, WorldPacket* data)
+void LootView::WriteData(ObjectGuid guid, LootType lootType, WorldPacket* data, bool isAoE)
 {
-    ObjectGuid lootGuid = viewer->GetLootGUID();
+    ObjectGuid lootGuid = guid;
 
     if (permission == PermissionTypes::NONE_PERMISSION)
     {
@@ -873,7 +882,7 @@ void LootView::WriteData(ObjectGuid guid, LootType lootType, WorldPacket* data)
         data->WriteBit(1);
         data->WriteBit(1); // isPersonalLooting
         data->WriteBit(1); // Missing unk8
-        data->WriteBit(0); // isAoELooting
+        data->WriteBit(isAoE); // isAoELooting
         data->WriteBit(guid[5]);
         data->WriteBit(lootGuid[6]);
         data->WriteBit(guid[1]);
@@ -925,7 +934,7 @@ void LootView::WriteData(ObjectGuid guid, LootType lootType, WorldPacket* data)
     data->WriteBit(!loot.gold);
     data->WriteBit(1); // isPersonalLooting
     data->WriteBit(1); // Missing unk8
-    data->WriteBit(0); // isAoELooting
+    data->WriteBit(isAoE); // isAoELooting
     data->WriteBit(guid[5]);
     data->WriteBit(lootGuid[6]);
 

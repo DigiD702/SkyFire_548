@@ -22,6 +22,7 @@
 #include "WorldSession.h"
 
 #include <string>
+#include <set>
 #include <vector>
 
 struct CreatureTemplate;
@@ -1568,7 +1569,7 @@ public:
     {
         AutoStoreLoot(NULL_BAG, NULL_SLOT, loot_id, store, broadcast);
     }
-    void StoreLootItem(uint8 lootSlot, Loot* loot);
+    void StoreLootItem(uint8 lootSlot, Loot* loot, uint64 lootGuid = 0);
 
     InventoryResult CanTakeMoreSimilarItems(uint32 entry, uint32 count, Item* pItem, uint32* no_space_count = NULL) const;
     InventoryResult CanStoreItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, uint32 entry, uint32 count, Item* pItem = NULL, bool swap = false, uint32* no_space_count = NULL) const;
@@ -2368,6 +2369,19 @@ public:
     {
         m_lootGuid = guid;
     }
+    std::set<uint64> const& GetLootView() const
+    {
+        return m_lootView;
+    }
+    bool IsLootingObject(uint64 guid) const
+    {
+        return m_lootView.find(guid) != m_lootView.end();
+    }
+    void AddLootedObject(uint64 guid)
+    {
+        m_lootView.insert(guid);
+    }
+    void RemoveLootedObject(uint64 guid);
 
     void RemovedInsignia(Player* looterPlr);
 
@@ -2628,10 +2642,10 @@ public:
     PlayerMenu* PlayerTalkClass;
     std::vector<ItemSetEffect*> ItemSetEff;
 
-    void SendLoot(uint64 guid, LootType loot_type);
+    void SendLoot(uint64 guid, LootType loot_type, bool isAoE = false);
     void SendLootRelease(ObjectGuid guid);
     void SendNotifyLootItemRemoved(uint8 lootSlot, ObjectGuid guid);
-    void SendNotifyLootMoneyRemoved();
+    void SendNotifyLootMoneyRemoved(ObjectGuid guid);
 
     /*********************************************************/
     /***               BATTLEGROUND SYSTEM                 ***/
@@ -3288,6 +3302,7 @@ protected:
 
     void outDebugValues() const;
     uint64 m_lootGuid;
+    std::set<uint64> m_lootView;
 
     uint32 m_team;
     uint32 m_nextSave;

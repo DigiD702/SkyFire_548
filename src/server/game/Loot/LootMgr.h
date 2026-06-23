@@ -331,9 +331,9 @@ struct Loot
     bool empty() const { return items.empty() && gold == 0; }
     bool isLooted() const { return gold == 0 && unlootedCount == 0; }
 
-    void NotifyItemRemoved(uint8 lootIndex);
-    void NotifyQuestItemRemoved(uint8 questIndex);
-    void NotifyMoneyRemoved();
+    void NotifyItemRemoved(uint8 lootIndex, ObjectGuid lootGuid = 0);
+    void NotifyQuestItemRemoved(uint8 questIndex, ObjectGuid lootGuid = 0);
+    void NotifyMoneyRemoved(ObjectGuid lootGuid = 0);
     void AddLooter(uint64 GUID) { PlayersLooting.insert(GUID); }
     void RemoveLooter(uint64 GUID) { PlayersLooting.erase(GUID); }
     bool HasLooter(uint64 GUID) { return PlayersLooting.find(GUID) != PlayersLooting.end(); }
@@ -373,7 +373,7 @@ struct LootView
     LootView(Loot& _loot, Player* _viewer, PermissionTypes _permission = PermissionTypes::ALL_PERMISSION)
         : loot(_loot), viewer(_viewer), permission(_permission) { }
 
-    void WriteData(ObjectGuid guid, LootType lootType, WorldPacket* data);
+    void WriteData(ObjectGuid guid, LootType lootType, WorldPacket* data, bool isAoE = false);
 };
 
 extern LootStore LootTemplates_Creature;
