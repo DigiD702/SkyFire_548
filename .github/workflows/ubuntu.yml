@@ -169,6 +169,8 @@ jobs:
           -DCMAKE_CXX_COMPILER="$CXX" \
           -DCMAKE_C_COMPILER_LAUNCHER=ccache \
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_INSTALL_PREFIX="$ELUNA_INSTALL_DIR" \
+          -DCONF_DIR="$ELUNA_INSTALL_DIR/etc" \
           -DTOOLS=OFF \
           -DUSE_COREPCH=ON \
           -DUSE_SCRIPTPCH=ON \
@@ -187,7 +189,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        cmake --install "$ELUNA_BUILD_DIR" --prefix "$ELUNA_INSTALL_DIR"
+        cmake --install "$ELUNA_BUILD_DIR"
         test -f "$ELUNA_INSTALL_DIR/etc/lua_scripts/startup_smoke.lua"
         test -d "$ELUNA_INSTALL_DIR/etc/lua_scripts/extensions"
 
