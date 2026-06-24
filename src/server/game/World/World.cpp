@@ -41,6 +41,9 @@
 #include "ItemEnchantmentMgr.h"
 #include "Language.h"
 #include "LFGMgr.h"
+#ifdef ELUNA
+void StartEluna(bool restart);
+#endif
 #include "Log.h"
 #include "LootMgr.h"
 #include "MapManager.h"
@@ -1315,6 +1318,9 @@ void World::LoadConfigSettings(bool reload)
     SetBoolConfig(WorldBoolConfigs::CONFIG_PDUMP_NO_PATHS, sConfigMgr->GetBoolDefault("PlayerDump.DisallowPaths", true));
     SetBoolConfig(WorldBoolConfigs::CONFIG_PDUMP_NO_OVERWRITE, sConfigMgr->GetBoolDefault("PlayerDump.DisallowOverwrite", true));
     SetBoolConfig(WorldBoolConfigs::CONFIG_UI_QUESTLEVELS_IN_DIALOGS, sConfigMgr->GetBoolDefault("UI.ShowQuestLevelsInDialogs", false));
+#ifdef ELUNA
+    SetBoolConfig(WorldBoolConfigs::CONFIG_ELUNA_ENABLED, sConfigMgr->GetBoolDefault("Eluna.Enabled", false));
+#endif
 
     // Wintergrasp battlefield
     SetBoolConfig(WorldBoolConfigs::CONFIG_WINTERGRASP_ENABLE, sConfigMgr->GetBoolDefault("Wintergrasp.Enable", false));
@@ -1839,6 +1845,11 @@ void World::SetInitialWorldSettings()
     SF_LOG_INFO("server.loading", "Initializing Scripts...");
     sScriptMgr->Initialize();
     sScriptMgr->OnConfigLoad(false);                                // must be done after the ScriptMgr has been properly initialized
+
+#ifdef ELUNA
+    if (GetBoolConfig(WorldBoolConfigs::CONFIG_ELUNA_ENABLED))
+        StartEluna(false);
+#endif
 
     SF_LOG_INFO("server.loading", "Validating spell scripts...");
     sObjectMgr->ValidateSpellScripts();

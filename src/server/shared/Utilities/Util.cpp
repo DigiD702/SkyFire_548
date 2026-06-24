@@ -12,7 +12,7 @@
 
 #include <atomic>
 #include <cstdarg>
-#include <ctime>
+#include <random>
 
 namespace
 {
@@ -20,8 +20,10 @@ namespace
     {
         static std::atomic<uint32> seedCounter{ 0 };
 
-        uint32 seed = static_cast<uint32>(std::time(nullptr));
-        seed ^= Skyfire::GetMSTime();
+        std::random_device entropy;
+
+        uint32 seed = static_cast<uint32>(entropy());
+        seed ^= static_cast<uint32>(entropy());
         seed ^= ++seedCounter * 0x9E3779B9u;
 
         return seed ? seed : 1;

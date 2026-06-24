@@ -2,7 +2,7 @@
 #   SkyFire World Server configuration file    #
 ################################################
 [worldserver]
-ConfVersion=2026160602
+ConfVersion=2026230601
 
 ###################################################################################################
 # SECTION INDEX
@@ -34,6 +34,7 @@ ConfVersion=2026160602
 #    BLACK MARKET SETTINGS
 #    PACKET SPOOF PROTECTION SETTINGS
 #    CHARACTER BOOST SETTINGS
+#    LUA ENGINE SETTINGS
 #
 ###################################################################################################
 
@@ -3191,6 +3192,28 @@ Boost.StartMoney = 1500000
 #
 
 Boost.StartLevel = 90
+
+#
+###################################################################################################
+
+###################################################################################################
+# LUA ENGINE SETTINGS
+#
+#    Eluna.Enabled
+#        Description: Enables Lua script loading when the core is built with CMake option ELUNA.
+#        Important:   This option has no effect unless the server was configured with -DELUNA=ON.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+#
+#
+#    Eluna.ScriptPath
+#        Description: Directory containing Lua scripts loaded by Eluna at worldserver startup.
+#        Important:   Relative paths are resolved from the worldserver working directory.
+#        Default:     lua_scripts
+#
+
+Eluna.Enabled = 0
+Eluna.ScriptPath = "lua_scripts"
 
 #
 ###################################################################################################
