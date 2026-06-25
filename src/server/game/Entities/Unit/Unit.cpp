@@ -2829,7 +2829,7 @@ Unit* Unit::GetNextRandomRaidMemberOrPet(float radius)
     if (nearMembers.empty())
         return NULL;
 
-    uint32 randTarget = std::rand() % (nearMembers.size() - 1);
+    uint32 randTarget = std::rand() % nearMembers.size();
     return nearMembers[randTarget];
 }
 

@@ -23,7 +23,7 @@ namespace Skyfire
             while (list_size > size)
             {
                 typename std::list<T>::iterator itr = list.begin();
-                std::advance(itr, std::rand() % (list_size - 1));
+                std::advance(itr, std::rand() % list_size);
                 list.erase(itr);
                 --list_size;
             }
@@ -48,7 +48,7 @@ namespace Skyfire
         template <class C> typename C::value_type const& SelectRandomContainerElement(C const& container)
         {
             typename C::const_iterator it = container.begin();
-            std::advance(it, std::rand() % (container.size() - 1));
+            std::advance(it, std::rand() % container.size());
             return *it;
         }
 
