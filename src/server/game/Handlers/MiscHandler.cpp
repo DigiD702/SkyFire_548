@@ -2486,13 +2486,28 @@ void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)
     _player->SetPendingBind(0, 0);
 }
 
+namespace
+{
+    bool IsKnownUnsupportedHotfixType(uint32 type)
+    {
+        switch (type)
+        {
+            case DB2_REPLY_BATTLEPETEFFECTPROPERTIES:
+                return true;
+            default:
+                return false;
+        }
+    }
+}
+
 void WorldSession::HandleRequestHotfix(WorldPacket& recvPacket)
 {
     uint32 type, count;
     recvPacket >> type;
 
     DB2StorageBase const* store = GetDB2Storage(type);
-    if (!store)
+    bool const knownUnsupportedType = !store && IsKnownUnsupportedHotfixType(type);
+    if (!store && !knownUnsupportedType)
     {
         SF_LOG_ERROR("network", "CMSG_REQUEST_HOTFIX: Received unknown hotfix type: %u", type);
         recvPacket.rfinish();
@@ -2501,34 +2516,54 @@ void WorldSession::HandleRequestHotfix(WorldPacket& recvPacket)
 
     count = recvPacket.ReadBits(21);
 
-    ObjectGuid* guids = new ObjectGuid[count];
+    std::vector<ObjectGuid> guids(count);
     for (uint32 i = 0; i < count; ++i)
     {
         recvPacket.ReadGuidMask(guids[i], 6, 3, 0, 1, 4, 5, 7, 2);
     }
 
-    uint32 entry;
+    std::vector<uint32> entries(count);
     for (uint32 i = 0; i < count; ++i)
     {
         recvPacket.ReadByteSeq(guids[i][1]);
-        recvPacket >> entry;
+        recvPacket >> entries[i];
         recvPacket.ReadGuidBytes(guids[i], 0, 5, 6, 4, 7, 2, 3);
+    }
 
+    if (knownUnsupportedType)
+    {
+        for (uint32 i = 0; i < count; ++i)
+        {
+            WorldPacket data(SMSG_DB_REPLY);
+            data << uint32(entries[i]);
+            data << uint32(time(NULL));
+            data << uint32(type);
+            data << uint32(0);
+
+            SendPacket(&data);
+        }
+
+        SF_LOG_DEBUG("network", "CMSG_REQUEST_HOTFIX: Sent empty replies for unsupported hotfix type: %u count: %u", type, count);
+        return;
+    }
+
+    for (uint32 i = 0; i < count; ++i)
+    {
         // temp: this should be moved once broadcast text is properly implemented
         if (type == DB2_REPLY_BROADCASTTEXT)
         {
-            SendBroadcastText(entry);
+            SendBroadcastText(entries[i]);
             continue;
         }
 
-        if (!store->HasRecord(entry))
+        if (!store->HasRecord(entries[i]))
             continue;
 
         ByteBuffer record;
-        store->WriteRecord(entry, (uint32)GetSessionDbcLocale(), record);
+        store->WriteRecord(entries[i], (uint32)GetSessionDbcLocale(), record);
 
         WorldPacket data(SMSG_DB_REPLY);
-        data << uint32(entry);
+        data << uint32(entries[i]);
         data << uint32(time(NULL));
         data << uint32(type);
         data << uint32(record.size());
@@ -2536,10 +2571,8 @@ void WorldSession::HandleRequestHotfix(WorldPacket& recvPacket)
 
         SendPacket(&data);
 
-        SF_LOG_DEBUG("network", "SMSG_DB_REPLY: Sent hotfix entry: %u type: %u", entry, type);
+        SF_LOG_DEBUG("network", "SMSG_DB_REPLY: Sent hotfix entry: %u type: %u", entries[i], type);
     }
-
-    delete[] guids;
 }
 
 void WorldSession::SendBroadcastText(uint32 entry)
