@@ -413,10 +413,16 @@ add_executable(game_domain_tests
 
 target_include_directories(game_domain_tests PRIVATE
   ${CMAKE_BINARY_DIR}
+  ${CMAKE_SOURCE_DIR}/dep/g3dlite/include
   ${CMAKE_SOURCE_DIR}/dep/recastnavigation/Detour
+  ${CMAKE_SOURCE_DIR}/dep/recastnavigation/Recast
+  ${CMAKE_SOURCE_DIR}/src/server/collision
+  ${CMAKE_SOURCE_DIR}/src/server/collision/Management
+  ${CMAKE_SOURCE_DIR}/src/server/collision/Models
   ${CMAKE_SOURCE_DIR}/src/server/shared
   ${CMAKE_SOURCE_DIR}/src/server/shared/Configuration
   ${CMAKE_SOURCE_DIR}/src/server/shared/Cryptography
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Database
   ${CMAKE_SOURCE_DIR}/src/server/shared/DataStores
   ${CMAKE_SOURCE_DIR}/src/server/shared/Debugging
   ${CMAKE_SOURCE_DIR}/src/server/shared/Dynamic
@@ -424,8 +430,11 @@ target_include_directories(game_domain_tests PRIVATE
   ${CMAKE_SOURCE_DIR}/src/server/shared/Logging
   ${CMAKE_SOURCE_DIR}/src/server/shared/Packets
   ${CMAKE_SOURCE_DIR}/src/server/shared/Platform
+  ${CMAKE_SOURCE_DIR}/src/server/shared/Threading
   ${CMAKE_SOURCE_DIR}/src/server/shared/Utilities
   ${CMAKE_SOURCE_DIR}/src/server/game
+  ${CMAKE_SOURCE_DIR}/src/server/game/Accounts
+  ${CMAKE_SOURCE_DIR}/src/server/game/Addons
   ${CMAKE_SOURCE_DIR}/src/server/game/Achievements
   ${CMAKE_SOURCE_DIR}/src/server/game/AI
   ${CMAKE_SOURCE_DIR}/src/server/game/AI/CoreAI
@@ -462,6 +471,7 @@ target_include_directories(game_domain_tests PRIVATE
   ${CMAKE_SOURCE_DIR}/src/server/game/Movement/MovementGenerators
   ${CMAKE_SOURCE_DIR}/src/server/game/Movement/Spline
   ${CMAKE_SOURCE_DIR}/src/server/game/Movement/Waypoints
+  ${CMAKE_SOURCE_DIR}/src/server/game/Opcodes
   ${CMAKE_SOURCE_DIR}/src/server/game/Quests
   ${CMAKE_SOURCE_DIR}/src/server/game/Scripting
   ${CMAKE_SOURCE_DIR}/src/server/game/Server
@@ -472,6 +482,7 @@ target_include_directories(game_domain_tests PRIVATE
   ${CMAKE_SOURCE_DIR}/src/server/game/World
   ${CMAKE_SOURCE_DIR}/src/server/worldserver/WorldThread
   ${Boost_INCLUDE_DIRS}
+  ${MYSQL_INCLUDE_DIR}
 )
 
 add_test(NAME game_domain_tests COMMAND game_domain_tests)
