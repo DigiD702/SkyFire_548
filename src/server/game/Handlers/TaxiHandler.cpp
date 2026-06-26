@@ -188,7 +188,6 @@ void WorldSession::HandleActivateTaxiExpressOpcode(WorldPacket& recvData)
 
     recvData.ReadGuidMask(guid, 6, 7);
     node_count = recvData.ReadBits(22);
-    printf("nodes_count [%u]\n", node_count);
     recvData.ReadGuidMask(guid, 2, 0, 4, 3, 1, 5);
     recvData.ReadGuidBytes(guid, 2, 7, 1);
 

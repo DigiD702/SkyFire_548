@@ -20,6 +20,7 @@
 #include "SpellSummonMetadata.h"
 #include "SpellTargeting.h"
 #include "SpellValidation.h"
+#include "SharedDefines.h"
 #include "ThreatCalcHelper.h"
 #include "WorldShutdownLifecycle.h"
 #include "WorldPacket.h"
@@ -134,6 +135,19 @@ namespace
         packet >> value >> state;
         passed &= Expect(value == 456, "WorldStateBuilder should write world-state value before id");
         passed &= Expect(state == 123, "WorldStateBuilder should write world-state id after value");
+
+        return passed;
+    }
+
+    bool TestTaxiReplyCodes()
+    {
+        bool passed = true;
+
+        passed &= Expect(ERR_TAXI_OK == 0, "Taxi OK reply should use the 5.4.8 success code");
+        passed &= Expect(ERR_TAXI_PLAYER_BUSY == 7, "Taxi busy reply should use the 5.4.8 busy code");
+        passed &= Expect(ERR_TAXI_PLAYER_ALREADY_MOUNTED == 8, "Taxi mounted reply should use the 5.4.8 mounted code");
+        passed &= Expect(ERR_TAXI_SAME_NODE == 11, "Taxi same-node reply should use the 5.4.8 same-node code");
+        passed &= Expect(ERR_TAXI_NOT_STANDING == 12, "Taxi not-standing reply should use the 5.4.8 not-standing code");
 
         return passed;
     }
@@ -1588,6 +1602,7 @@ int main()
     passed &= TestCurrencyFormulaBoundaries();
     passed &= TestWorldPacketContainerBehavior();
     passed &= TestWorldStateBuilderPacketLayout();
+    passed &= TestTaxiReplyCodes();
     passed &= TestThreatSpellModifierRules();
     passed &= TestSpellValidationMasks();
     passed &= TestSpellTargetingRules();
