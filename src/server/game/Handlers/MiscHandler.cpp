@@ -2488,11 +2488,67 @@ void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)
 
 namespace
 {
-    bool IsKnownUnsupportedHotfixType(uint32 type)
+    bool IsKnownHotfixType(uint32 type)
     {
         switch (type)
         {
+            case DB2_REPLY_BATTLEPETABILITY:
+            case DB2_REPLY_BATTLEPETABILITYEFFECT:
+            case DB2_REPLY_BATTLEPETABILITYSTATE:
+            case DB2_REPLY_BATTLEPETABILITYTURN:
+            case DB2_REPLY_BATTLEPETBREEDQUALITY:
+            case DB2_REPLY_BATTLEPETBREEDSTATE:
             case DB2_REPLY_BATTLEPETEFFECTPROPERTIES:
+            case DB2_REPLY_BATTLEPETNPCTEAMMEMBER:
+            case DB2_REPLY_BATTLEPETSPECIES:
+            case DB2_REPLY_BATTLEPETSPECIESSTATE:
+            case DB2_REPLY_BATTLEPETSPECIESXABILITY:
+            case DB2_REPLY_BATTLEPETSTATE:
+            case DB2_REPLY_BATTLEPETVISUAL:
+            case DB2_REPLY_BROADCASTTEXT:
+            case DB2_REPLY_CREATURE:
+            case DB2_REPLY_CREATUREDIFFICULTY:
+            case DB2_REPLY_CURVE:
+            case DB2_REPLY_CURVEPOINT:
+            case DB2_REPLY_DEVICEBLACKLIST:
+            case DB2_REPLY_DRIVERBLACKLIST:
+            case DB2_REPLY_GAMEOBJECTS:
+            case DB2_REPLY_ITEM:
+            case DB2_REPLY_ITEM_SPARSE:
+            case DB2_REPLY_ITEMCURRENCYCOST:
+            case DB2_REPLY_ITEMEXTENDEDCOST:
+            case DB2_REPLY_ITEMTOBATTLEPET:
+            case DB2_REPLY_ITEMTOMOUNTSPELL:
+            case DB2_REPLY_ITEMUPGRADE:
+            case DB2_REPLY_KEYCHAIN:
+            case DB2_REPLY_LOCALE:
+            case DB2_REPLY_LOCATION:
+            case DB2_REPLY_MAPCHALLENGEMODE:
+            case DB2_REPLY_MARKETINGPROMOTIONSXLOCALE:
+            case DB2_REPLY_PATH:
+            case DB2_REPLY_PATHNODE:
+            case DB2_REPLY_PATHNODEPROPERTY:
+            case DB2_REPLY_PATHPROPERTY:
+            case DB2_REPLY_QUESTPACKAGEITEM:
+            case DB2_REPLY_RULESETITEMUPGRADE:
+            case DB2_REPLY_RULESETRAIDLOOTUPGRADE:
+            case DB2_REPLY_SCENESCRIPT:
+            case DB2_REPLY_SCENESCRIPTPACKAGE:
+            case DB2_REPLY_SCENESCRIPTPACKAGEMEMBER:
+            case DB2_REPLY_SPELLEFFECTCAMERASHAKES:
+            case DB2_REPLY_SPELLMISSILE:
+            case DB2_REPLY_SPELLMISSILEMOTION:
+            case DB2_REPLY_SPELLREAGENTS:
+            case DB2_REPLY_SPELLVISUAL:
+            case DB2_REPLY_SPELLVISUALEFFECTNAME:
+            case DB2_REPLY_SPELLVISUALKIT:
+            case DB2_REPLY_SPELLVISUALKITMODELATTACH:
+            case DB2_REPLY_SPELLVISUALMISSILE:
+            case DB2_REPLY_VIGNETTE:
+            case DB2_REPLY_WBACCESSCONTROLLIST:
+            case DB2_REPLY_WBCERTBLACKLIST:
+            case DB2_REPLY_WBCERTWHITELIST:
+            case DB2_REPLY_WBPERMISSIONS:
                 return true;
             default:
                 return false;
@@ -2506,7 +2562,8 @@ void WorldSession::HandleRequestHotfix(WorldPacket& recvPacket)
     recvPacket >> type;
 
     DB2StorageBase const* store = GetDB2Storage(type);
-    bool const knownUnsupportedType = !store && IsKnownUnsupportedHotfixType(type);
+    bool const knownHotfixType = IsKnownHotfixType(type);
+    bool const knownUnsupportedType = !store && knownHotfixType;
     if (!store && !knownUnsupportedType)
     {
         SF_LOG_ERROR("network", "CMSG_REQUEST_HOTFIX: Received unknown hotfix type: %u", type);
