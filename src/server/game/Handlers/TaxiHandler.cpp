@@ -16,6 +16,12 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+#define SF_TAXI_TRACE(format, ...) \
+    do { \
+        SF_LOG_INFO("network", format, __VA_ARGS__); \
+        SF_LOG_TRACE("network.opcode", format, __VA_ARGS__); \
+    } while (0)
+
 void WorldSession::HandleTaxiNodeStatusQueryOpcode(WorldPacket& recvData)
 {
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_TAXI_NODE_STATUS_QUERY");
@@ -26,7 +32,7 @@ void WorldSession::HandleTaxiNodeStatusQueryOpcode(WorldPacket& recvData)
     recvData.ReadGuidBytes(guid, 4, 1, 5, 0, 2, 7, 6, 3);
 
     TraceNextOutgoingPackets(8, "taxi node status query");
-    SF_LOG_INFO("network", "Taxi trace C->S: CMSG_TAXI_NODE_STATUS_QUERY guidLow=%u", uint32(GUID_LOPART(guid)));
+    SF_TAXI_TRACE("Taxi trace C->S: CMSG_TAXI_NODE_STATUS_QUERY guidLow=%u", uint32(GUID_LOPART(guid)));
 
     SendTaxiStatus(guid);
 }
@@ -60,7 +66,7 @@ void WorldSession::SendTaxiStatus(uint64 guid)
     data.WriteBit(Guid[1]);
     uint8 status = GetPlayer()->m_taxi.IsTaximaskNodeKnown(curloc) ? TAXI_NODE_STATUS_KNOWN : TAXI_NODE_STATUS_UNKNOWN;
 
-    SF_LOG_INFO("network", "Taxi trace: status query node=%u status=%u guidLow=%u", curloc, status, uint32(GUID_LOPART(guid)));
+    SF_TAXI_TRACE("Taxi trace: status query node=%u status=%u guidLow=%u", curloc, status, uint32(GUID_LOPART(guid)));
 
     data.WriteBits(status, 2);
     data.WriteBit(Guid[3]);
@@ -92,7 +98,7 @@ void WorldSession::HandleTaxiQueryAvailableNodes(WorldPacket& recvData)
     recvData.ReadGuidBytes(guid, 0, 3, 7, 5, 2, 6, 4, 1);
 
     TraceNextOutgoingPackets(12, "taxi available nodes query");
-    SF_LOG_INFO("network", "Taxi trace C->S: CMSG_TAXI_QUERY_AVAILABLE_NODES guidLow=%u", uint32(GUID_LOPART(guid)));
+    SF_TAXI_TRACE("Taxi trace C->S: CMSG_TAXI_QUERY_AVAILABLE_NODES guidLow=%u", uint32(GUID_LOPART(guid)));
 
     // cheating checks
     Creature* unit = GetPlayer()->GetNPCIfCanInteractWith(guid, UNIT_NPC_FLAG_FLIGHTMASTER);
@@ -140,7 +146,7 @@ void WorldSession::SendTaxiMenu(Creature* unit)
     GetPlayer()->m_taxi.AppendTaximaskTo(data, GetPlayer()->isTaxiCheater());
 
     TraceNextOutgoingPackets(4, "taxi show nodes");
-    SF_LOG_INFO("network", "Taxi trace: show nodes currentNode=%u maskSize=%u guidLow=%u",
+    SF_TAXI_TRACE("Taxi trace: show nodes currentNode=%u maskSize=%u guidLow=%u",
         curloc, uint32(TaxiMaskSize), uint32(unit->GetGUIDLow()));
 
     SendPacket(&data);
@@ -162,7 +168,7 @@ void WorldSession::SendDoFlight(uint32 mountDisplayId, uint32 path, uint32 pathN
     if (mountDisplayId)
     {
         TraceNextOutgoingPackets(8, "taxi flight start");
-        SF_LOG_INFO("network", "Taxi trace: start flight mountDisplayId=%u path=%u pathNode=%u",
+        SF_TAXI_TRACE("Taxi trace: start flight mountDisplayId=%u path=%u pathNode=%u",
             mountDisplayId, path, pathNode);
         GetPlayer()->Mount(mountDisplayId);
     }
@@ -181,7 +187,7 @@ bool WorldSession::SendLearnNewTaxiNode(Creature* unit)
 
     if (GetPlayer()->m_taxi.SetTaximaskNode(curloc))
     {
-        SF_LOG_INFO("network", "Taxi trace: learned taxi node=%u guidLow=%u", curloc, uint32(unit->GetGUIDLow()));
+        SF_TAXI_TRACE("Taxi trace: learned taxi node=%u guidLow=%u", curloc, uint32(unit->GetGUIDLow()));
 
         WorldPacket msg(SMSG_NEW_TAXI_PATH, 0);
         SendPacket(&msg);
@@ -236,7 +242,7 @@ void WorldSession::HandleActivateTaxiExpressOpcode(WorldPacket& recvData)
     }
 
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_ACTIVATE_TAXI_EXPRESS from %d to %d", nodes.front(), nodes.back());
-    SF_LOG_INFO("network", "Taxi trace C->S: CMSG_ACTIVATE_TAXI_EXPRESS nodes=%u from=%u to=%u guidLow=%u",
+    SF_TAXI_TRACE("Taxi trace C->S: CMSG_ACTIVATE_TAXI_EXPRESS nodes=%u from=%u to=%u guidLow=%u",
         node_count, nodes.front(), nodes.back(), uint32(GUID_LOPART(guid)));
 
     GetPlayer()->ActivateTaxiPathTo(nodes, npc);
@@ -330,7 +336,7 @@ void WorldSession::HandleActivateTaxiOpcode(WorldPacket& recvData)
     recvData.ReadGuidBytes(guid, 1, 0, 6, 5, 2, 4, 3, 7);
 
     TraceNextOutgoingPackets(12, "taxi activate");
-    SF_LOG_INFO("network", "Taxi trace C->S: CMSG_ACTIVATE_TAXI from=%u to=%u guidLow=%u",
+    SF_TAXI_TRACE("Taxi trace C->S: CMSG_ACTIVATE_TAXI from=%u to=%u guidLow=%u",
         nodes[0], nodes[1], uint32(GUID_LOPART(guid)));
 
     SF_LOG_DEBUG("network", "WORLD: Received CMSG_ACTIVATE_TAXI from %d to %d", nodes[0], nodes[1]);
@@ -346,10 +352,12 @@ void WorldSession::HandleActivateTaxiOpcode(WorldPacket& recvData)
 
 void WorldSession::SendActivateTaxiReply(ActivateTaxiReply reply)
 {
-    SF_LOG_INFO("network", "Taxi trace: activate reply=%u", uint32(reply));
+    SF_TAXI_TRACE("Taxi trace: activate reply=%u", uint32(reply));
 
     WorldPacket data(SMSG_ACTIVATE_TAXI_REPLY, 4);
     data.WriteBits(reply, 4);
     data.FlushBits();
     SendPacket(&data);
 }
+
+#undef SF_TAXI_TRACE

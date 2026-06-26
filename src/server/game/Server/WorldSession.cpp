@@ -275,6 +275,9 @@ void WorldSession::SendPacket(WorldPacket const* packet, bool forced /*= false*/
         SF_LOG_INFO("network", "Packet trace (%s) S->C: %s size %u",
             _outgoingPacketTraceReason.empty() ? "session" : _outgoingPacketTraceReason.c_str(),
             opcodeName.c_str(), uint32(packet->size()));
+        SF_LOG_TRACE("network.opcode", "Packet trace (%s) S->C: %s size %u",
+            _outgoingPacketTraceReason.empty() ? "session" : _outgoingPacketTraceReason.c_str(),
+            opcodeName.c_str(), uint32(packet->size()));
         --_outgoingPacketTraceCount;
     }
 
