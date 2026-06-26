@@ -557,6 +557,27 @@ namespace
         return passed;
     }
 
+    bool TestSqlScriptIgnoresQuotesInsideComments()
+    {
+        std::string sql =
+            "-- Deferred IDs include Kor'kron and Y'Shaarj entries\n"
+            "DELETE FROM `creature_loot_template`\n"
+            "WHERE `entry` IN (71454);\n"
+            "-- 71454 - Malkorok\n"
+            "INSERT INTO `creature_loot_template` (`entry`, `item`) VALUES (71454, 102303);\n";
+
+        std::vector<std::string> statements = Skyfire::Database::SplitSqlStatements(sql);
+
+        bool passed = true;
+        passed &= Expect(statements.size() == 2, "SQL splitter should ignore apostrophes inside line comments");
+        passed &= Expect(statements[0].find("DELETE FROM `creature_loot_template`") != std::string::npos,
+            "SQL splitter should keep the DELETE statement after an apostrophe comment");
+        passed &= Expect(statements[1].find("INSERT INTO `creature_loot_template`") != std::string::npos,
+            "SQL splitter should split the INSERT after an apostrophe comment");
+
+        return passed;
+    }
+
     bool TestSqlScriptSplitsDelimiterStatements()
     {
         std::string sql =
@@ -733,6 +754,7 @@ int main()
     passed &= TestMissingDatabaseRequiresAutoCreate();
     passed &= TestSqlUpdatesAreDiscoveredFromConfiguredRoot();
     passed &= TestSqlScriptSplitsStatementsSafely();
+    passed &= TestSqlScriptIgnoresQuotesInsideComments();
     passed &= TestSqlScriptSplitsDelimiterStatements();
     passed &= TestSqlScriptExecutorStopsOnFailure();
     passed &= TestStableSqlHash();

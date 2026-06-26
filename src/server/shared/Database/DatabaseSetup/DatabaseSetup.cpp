@@ -141,6 +141,36 @@ namespace Database
                     continue;
                 }
 
+                if (c == '-' && i + 1 < sql.length() && sql[i + 1] == '-' &&
+                    (i + 2 == sql.length() || std::isspace(static_cast<unsigned char>(sql[i + 2]))))
+                {
+                    i += 2;
+                    while (i < sql.length() && sql[i] != '\n')
+                        ++i;
+
+                    continue;
+                }
+
+                if (c == '#')
+                {
+                    while (i < sql.length() && sql[i] != '\n')
+                        ++i;
+
+                    continue;
+                }
+
+                if (c == '/' && i + 1 < sql.length() && sql[i + 1] == '*')
+                {
+                    i += 2;
+                    while (i + 1 < sql.length() && !(sql[i] == '*' && sql[i + 1] == '/'))
+                        ++i;
+
+                    if (i + 1 < sql.length())
+                        ++i;
+
+                    continue;
+                }
+
                 if (!delimiter.empty() && sql.compare(i, delimiter.length(), delimiter) == 0)
                     return i;
 
