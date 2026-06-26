@@ -66,6 +66,7 @@ enum BG_SA_Timers
 
 enum BG_SA_WorldStates
 {
+    BG_SA_TIMER = 3557,
     BG_SA_TIMER_MINS = 3559,
     BG_SA_TIMER_SEC_TENS = 3560,
     BG_SA_TIMER_SEC_DECS = 3561,
@@ -566,6 +567,7 @@ private:
     void DestroyGate(Player* player, GameObject* go) OVERRIDE;
     /// Update timer worldstate
     void SendTime();
+    uint32 GetTimerWorldState() const;
     /**
      * \brief Called when a graveyard is capture
      * -Update spiritguide

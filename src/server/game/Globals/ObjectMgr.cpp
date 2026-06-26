@@ -458,8 +458,8 @@ void ObjectMgr::LoadCreatureTemplates()
         creatureTemplate.SubName = fields[11].GetString();
         creatureTemplate.IconName = fields[12].GetString();
         creatureTemplate.GossipMenuId = fields[13].GetUInt32();
-        creatureTemplate.minlevel = uint8(fields[14].GetInt16());
-        creatureTemplate.maxlevel = uint8(fields[15].GetInt16());
+        creatureTemplate.minlevel = fields[14].GetInt8();
+        creatureTemplate.maxlevel = fields[15].GetInt8();
         creatureTemplate.expansion = uint32(fields[16].GetInt16());
         creatureTemplate.expansionUnknown = uint32(fields[17].GetUInt16());
         creatureTemplate.faction_A = uint32(fields[18].GetUInt16());
@@ -1968,7 +1968,8 @@ void ObjectMgr::LoadGameobjects()
             case GOState::GO_STATE_ACTIVE:
             case GOState::GO_STATE_READY:
             case GOState::GO_STATE_ACTIVE_ALTERNATIVE:
-            case GOState::GO_STATE_PREPARE_TRANSPORT:
+            case GOState::GO_STATE_TRANSPORT_ACTIVE:
+            case GOState::GO_STATE_TRANSPORT_STOPPED:
                 break;
             default:
             {

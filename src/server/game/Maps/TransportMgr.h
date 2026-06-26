@@ -78,6 +78,8 @@ struct TransportAnimation
     uint32 TotalTime;
 
     TransportAnimationEntry const* GetAnimNode(uint32 time) const;
+    TransportAnimationEntry const* GetPrevAnimNode(uint32 time) const;
+    TransportAnimationEntry const* GetNextAnimNode(uint32 time) const;
     G3D::Quat GetAnimRotation(uint32 time) const;
 };
 

@@ -539,6 +539,9 @@ union GameObjectValue
         uint32 PathProgress;
         TransportAnimation const* AnimationInfo;
         uint32 CurrentSeg;
+        uint32 StateChangeTime;
+        uint32 StateChangeProgress;
+        bool WaitingAtPathStart;
     } Transport;
     //25 GAMEOBJECT_TYPE_FISHINGHOLE
     struct
@@ -570,7 +573,9 @@ enum class GOState
     GO_STATE_ACTIVE = 0,                        // show in world as used and not reset (closed door open)
     GO_STATE_READY = 1,                        // show in world as ready (closed door close)
     GO_STATE_ACTIVE_ALTERNATIVE = 2,                        // show in world as used in alt way and not reset (closed door open by cannon fire)
-    GO_STATE_PREPARE_TRANSPORT = 24                        // reset transport to startpoint after endpoint
+    GO_STATE_PREPARE_TRANSPORT = 24,                        // legacy name, transport active/start frame
+    GO_STATE_TRANSPORT_ACTIVE = 24,
+    GO_STATE_TRANSPORT_STOPPED = 25                         // first transport stop frame
 };
 
 // from `gameobject`
@@ -705,6 +710,10 @@ public:
     void SetGoState(GOState state);
     GameobjectTypes GetGoType() const { return GameobjectTypes(GetByteValue(GAMEOBJECT_FIELD_PERCENT_HEALTH, 1)); }
     void SetGoType(GameobjectTypes type) { SetByteValue(GAMEOBJECT_FIELD_PERCENT_HEALTH, 1, type); }
+    uint32 GetTransportPeriod() const;
+    uint32 GetTransportPathProgress() const { return m_goValue.Transport.PathProgress; }
+    void SetTransportPathProgress(uint32 pathProgress);
+    std::vector<uint32> const* GetPauseTimes() const;
     void SetGoHealth(uint8 health) { SetByteValue(GAMEOBJECT_FIELD_PERCENT_HEALTH, 3, health); }
     uint8 GetGoArtKit() const { return GetByteValue(GAMEOBJECT_FIELD_STATE_SPELL_VISUAL_ID, 1); }
     void SetGoArtKit(uint8 artkit);
@@ -824,6 +833,12 @@ protected:
     bool AIM_Initialize();
     GameObjectModel* CreateModel();
     void UpdateModel();                                 // updates model in case displayId were changed
+    void InitializeLegacyTransport();
+    void UpdateLegacyTransportPathProgress();
+    void HandleLegacyTransportStateChange(GOState oldState, GOState newState);
+    void SetLegacyTransportStopped(bool stopped);
+    void MarkLegacyTransportPathProgressChanged();
+    uint32 GetLegacyTransportTargetProgress(GOState state) const;
     uint32      m_spellId;
     time_t      m_respawnTime;                          // (secs) time of next respawn (or despawn if GO have owner()),
     uint32      m_respawnDelayTime;                     // (secs) if 0 then current GO state no dependent from timer
@@ -844,6 +859,7 @@ protected:
     GameObjectTemplate const* m_goInfo;
     GameObjectData const* m_goData;
     GameObjectValue m_goValue;
+    std::vector<uint32> m_transportPauseTimes;
 
     uint64 m_rotation;
     Position m_stationaryPosition;

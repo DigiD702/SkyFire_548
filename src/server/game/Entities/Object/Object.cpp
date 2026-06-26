@@ -27,6 +27,7 @@
 #include "SpellAuraEffects.h"
 #include "TargetedMovementGenerator.h"
 #include "TemporarySummon.h"
+#include "GameObjectTransportTiming.h"
 #include "Totem.h"
 #include "Transport.h"
 #include "Unit.h"
@@ -355,13 +356,17 @@ void Object::BuildMovementUpdate(ByteBuffer* data, uint16 flags) const
 
     uint32 movementFlags;
     uint32 movementFlagsExtra;
+    std::vector<uint32> const* pauseTimes = NULL;
+
+    if (GameObject const* go = ToGameObject())
+        pauseTimes = go->GetPauseTimes();
 
     data->WriteBit(0);                                        // 676  UPDATEFLAG_HAS_GAMEOBJECT          // NEW
     data->WriteBit(false /*flags & UPDATEFLAG_ANIMKITS*/);    // 498  UPDATEFLAG_ANIMKITS                // OLD
     data->WriteBit(flags & UPDATEFLAG_LIVING);                // 368  UPDATEFLAG_LIVING                  // OLD
     data->WriteBit(0);                                        // 810  UPDATEFLAG_SCENE_LOCAL_SCRIPT_DATA // NEW
     data->WriteBit(0);
-    data->WriteBits(0, 22);                                   // 1068 UPDATEFLAG_TRANSPORT_FRAME_COUNT   // NEW
+    data->WriteBits(pauseTimes ? pauseTimes->size() : 0, 22); // 1068 UPDATEFLAG_TRANSPORT_FRAME_COUNT   // NEW
     data->WriteBit(flags & UPDATEFLAG_VEHICLE);               // 488  UPDATEFLAG_VEHICLE                 // OLD
     data->WriteBit(0);                                        // 1044 UNK
     data->WriteBit(0);
@@ -531,6 +536,9 @@ void Object::BuildMovementUpdate(ByteBuffer* data, uint16 flags) const
     data->FlushBits();
 
     // 1068 {}
+    if (pauseTimes && !pauseTimes->empty())
+        data->append(pauseTimes->data(), pauseTimes->size());
+
     // 1032 {}
 
     if (flags & UPDATEFLAG_LIVING)
@@ -765,6 +773,7 @@ void Object::BuildMovementUpdate(ByteBuffer* data, uint16 flags) const
     {
         GameObject const* go = ToGameObject();
 
+        // Legacy type-11 transports send path progress in dynamic flags; this field must remain a clock.
         if (go && go->ToTransport())
             *data << uint32(go->GetGOValue()->Transport.PathProgress);
         else

@@ -11,6 +11,8 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+#include <ctime>
+
 BattlegroundSA::BattlegroundSA() : gateDestroyed(false), Attackers(TeamId::TEAM_ALLIANCE), TotalTime(0), EndRoundTimer(0), ShipsStarted(false), Status(BG_SA_Status::BG_SA_NOTSTARTED), TimerEnabled(false),
 UpdateWaitTimer(0), SignaledRoundTwo(false), SignaledRoundTwoHalfMin(false), InitSecondRound(false)
 {
@@ -32,7 +34,7 @@ BattlegroundSA::~BattlegroundSA() { }
 void BattlegroundSA::Reset()
 {
     TotalTime = 0;
-    Attackers = (std::rand() % 1) ? TEAM_ALLIANCE : TEAM_HORDE;
+    Attackers = (std::rand() % 2) ? TEAM_ALLIANCE : TEAM_HORDE;
     for (uint8 i = 0; i <= 5; i++)
         GateStatus[i] = BG_SA_GATE_OK;
     ShipsStarted = false;
@@ -225,10 +227,9 @@ bool BattlegroundSA::ResetObjs()
     UpdateWorldState(BG_SA_YELLOW_GATEWS, 1);
     UpdateWorldState(BG_SA_ANCIENT_GATEWS, 1);
 
-    for (int i = BG_SA_BOAT_ONE; i <= BG_SA_BOAT_TWO; i++)
-        for (BattlegroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
-            if (Player* player = ObjectAccessor::FindPlayer(itr->first))
-                SendTransportInit(player);
+    for (BattlegroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+        if (Player* player = ObjectAccessor::FindPlayer(itr->first))
+            SendTransportInit(player);
 
     // set status manually so preparation is cast correctly in 2nd round too
     SetStatus(STATUS_WAIT_JOIN);
@@ -242,23 +243,28 @@ void BattlegroundSA::StartShips()
     if (ShipsStarted)
         return;
 
-    DoorOpen(BG_SA_BOAT_ONE);
-    DoorOpen(BG_SA_BOAT_TWO);
+    GetBGObject(BG_SA_BOAT_ONE)->SetGoState(GOState::GO_STATE_TRANSPORT_STOPPED);
+    GetBGObject(BG_SA_BOAT_TWO)->SetGoState(GOState::GO_STATE_TRANSPORT_STOPPED);
 
-    for (int i = BG_SA_BOAT_ONE; i <= BG_SA_BOAT_TWO; i++)
+    for (uint8 i = BG_SA_BOAT_ONE; i <= BG_SA_BOAT_TWO; ++i)
     {
+        GameObject* transport = GetBGObject(i);
+        if (!transport)
+            continue;
+
         for (BattlegroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
         {
-            if (Player* p = ObjectAccessor::FindPlayer(itr->first))
+            if (Player* player = ObjectAccessor::FindPlayer(itr->first))
             {
-                UpdateData data(p->GetMapId());
-                WorldPacket pkt;
-                GetBGObject(i)->BuildValuesUpdateBlockForPlayer(&data, p);
-                data.BuildPacket(&pkt);
-                p->SendDirectMessage(&pkt);
+                UpdateData data(player->GetMapId());
+                WorldPacket packet;
+                transport->BuildValuesUpdateBlockForPlayer(&data, player);
+                data.BuildPacket(&packet);
+                player->SendDirectMessage(&packet);
             }
         }
     }
+
     ShipsStarted = true;
 }
 
@@ -394,8 +400,8 @@ void BattlegroundSA::FillInitialWorldStates(WorldStateBuilder& builder)
     builder.AppendState(BG_SA_HORDE_ATTACKS, horde_attacks);
     builder.AppendState(BG_SA_ALLY_ATTACKS, ally_attacks);
 
-    //Time will be sent on first update...
     builder.AppendState(BG_SA_ENABLE_TIMER, TimerEnabled ? 1 : 0);
+    builder.AppendState(BG_SA_TIMER, GetTimerWorldState());
     builder.AppendState(BG_SA_TIMER_MINS, 0);
     builder.AppendState(BG_SA_TIMER_SEC_TENS, 0);
     builder.AppendState(BG_SA_TIMER_SEC_DECS, 0);
@@ -423,13 +429,15 @@ void BattlegroundSA::AddPlayer(Player* player)
     //create score and add it to map, default values are set in constructor
     BattlegroundSAScore* sc = new BattlegroundSAScore;
 
+    SendTransportInit(player);
+
     if (!ShipsStarted)
     {
         if (player->GetTeamId() == Attackers)
         {
             player->CastSpell(player, 12438, true);//Without this player falls before boat loads...
 
-            if (std::rand() % 1)
+            if (std::rand() % 2)
                 player->TeleportTo(607, 2682.936f, -830.368f, 15.0f, 2.895f, 0);
             else
                 player->TeleportTo(607, 2577.003f, 980.261f, 15.0f, 0.807f, 0);
@@ -444,7 +452,6 @@ void BattlegroundSA::AddPlayer(Player* player)
         else
             player->TeleportTo(607, 1209.7f, -65.16f, 70.1f, 0.0f, 0);
     }
-    SendTransportInit(player);
     PlayerScores[player->GetGUID()] = sc;
 }
 
@@ -498,7 +505,7 @@ void BattlegroundSA::TeleportPlayers()
             {
                 player->CastSpell(player, 12438, true);     //Without this player falls before boat loads...
 
-                if (std::rand() % 1)
+                if (std::rand() % 2)
                     player->TeleportTo(607, 2682.936f, -830.368f, 15.0f, 2.895f, 0);
                 else
                     player->TeleportTo(607, 2577.003f, 980.261f, 15.0f, 0.807f, 0);
@@ -668,10 +675,16 @@ WorldSafeLocsEntry const* BattlegroundSA::GetClosestGraveYard(Player* player)
 
 void BattlegroundSA::SendTime()
 {
-    uint32 end_of_round = (EndRoundTimer - TotalTime);
-    UpdateWorldState(BG_SA_TIMER_MINS, end_of_round / 60000);
-    UpdateWorldState(BG_SA_TIMER_SEC_TENS, (end_of_round % 60000) / 10000);
-    UpdateWorldState(BG_SA_TIMER_SEC_DECS, ((end_of_round % 60000) % 10000) / 1000);
+    UpdateWorldState(BG_SA_TIMER, GetTimerWorldState());
+}
+
+uint32 BattlegroundSA::GetTimerWorldState() const
+{
+    if (!TimerEnabled || EndRoundTimer <= TotalTime)
+        return 0;
+
+    uint32 const remaining = EndRoundTimer - TotalTime;
+    return uint32(time(NULL)) + ((remaining + IN_MILLISECONDS - 1) / IN_MILLISECONDS);
 }
 
 void BattlegroundSA::EventPlayerClickedOnFlag(Player* Source, GameObject* target_obj)
@@ -861,10 +874,15 @@ void BattlegroundSA::ToggleTimer()
 {
     TimerEnabled = !TimerEnabled;
     UpdateWorldState(BG_SA_ENABLE_TIMER, (TimerEnabled) ? 1 : 0);
+    SendTime();
 }
 
 void BattlegroundSA::EndBattleground(uint32 winner)
 {
+    TimerEnabled = false;
+    UpdateWorldState(BG_SA_ENABLE_TIMER, 0);
+    SendTime();
+
     //honor reward for winning
     if (winner == ALLIANCE)
         RewardHonorToTeam(GetBonusHonorFromKill(1), ALLIANCE);

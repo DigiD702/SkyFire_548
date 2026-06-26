@@ -439,6 +439,33 @@ TransportAnimationEntry const* TransportAnimation::GetAnimNode(uint32 time) cons
     return Path.begin()->second;
 }
 
+TransportAnimationEntry const* TransportAnimation::GetPrevAnimNode(uint32 time) const
+{
+    if (Path.empty())
+        return NULL;
+
+    TransportPathContainer::const_iterator itr = Path.lower_bound(time);
+    if (itr != Path.begin())
+    {
+        --itr;
+        return itr->second;
+    }
+
+    return Path.rbegin()->second;
+}
+
+TransportAnimationEntry const* TransportAnimation::GetNextAnimNode(uint32 time) const
+{
+    if (Path.empty())
+        return NULL;
+
+    TransportPathContainer::const_iterator itr = Path.lower_bound(time);
+    if (itr != Path.end())
+        return itr->second;
+
+    return Path.begin()->second;
+}
+
 G3D::Quat TransportAnimation::GetAnimRotation(uint32 time) const
 {
     if (Rotations.empty())

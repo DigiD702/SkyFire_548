@@ -9,6 +9,7 @@
 #include "DynamicTree.h"
 #include "GameObjectAI.h"
 #include "GameObjectModel.h"
+#include "GameObjectTransportTiming.h"
 #include "GridNotifiersImpl.h"
 #include "Group.h"
 #include "GroupMgr.h"
@@ -189,10 +190,14 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map* map, float x, float
         return false;
     }
 
+    HighGuid guidHigh = HIGHGUID_GAMEOBJECT;
     if (goinfo->type == GAMEOBJECT_TYPE_TRANSPORT)
+    {
         m_updateFlag |= UPDATEFLAG_TRANSPORT;
+        guidHigh = HIGHGUID_TRANSPORT;
+    }
 
-    Object::_Create(guidlow, goinfo->entry, HIGHGUID_GAMEOBJECT);
+    Object::_Create(guidlow, goinfo->entry, guidHigh);
 
     m_goInfo = goinfo;
 
@@ -240,13 +245,15 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map* map, float x, float
             SetUInt32Value(GAMEOBJECT_FIELD_PARENT_ROTATION, m_goInfo->building.destructibleData);
             break;
         case GAMEOBJECT_TYPE_TRANSPORT:
-            SetUInt32Value(GAMEOBJECT_FIELD_LEVEL, goinfo->transport.pause);
-            SetGoState(goinfo->transport.startOpen ? GOState::GO_STATE_ACTIVE : GOState::GO_STATE_READY);
+        {
+            InitializeLegacyTransport();
+            GOState const initialTransportState = GOState(Skyfire::GameObjects::GetInitialLegacyTransportState(
+                goinfo->transport.startOpen != 0, !m_transportPauseTimes.empty()));
+            SetByteValue(GAMEOBJECT_FIELD_PERCENT_HEALTH, 0, GetGOStateValue(initialTransportState));
+            SetLegacyTransportStopped(!m_transportPauseTimes.empty());
             SetGoAnimProgress(animprogress);
-            m_goValue.Transport.PathProgress = 0;
-            m_goValue.Transport.AnimationInfo = sTransportMgr->GetTransportAnimInfo(goinfo->entry);
-            m_goValue.Transport.CurrentSeg = 0;
             break;
+        }
         case GAMEOBJECT_TYPE_FISHINGNODE:
             SetGoAnimProgress(0);
             break;
@@ -283,6 +290,9 @@ void GameObject::Update(uint32 diff)
         AI()->UpdateAI(diff);
     else if (!AIM_Initialize())
         SF_LOG_ERROR("misc", "Could not initialize GameObjectAI");
+
+    if (GetGoType() == GAMEOBJECT_TYPE_TRANSPORT)
+        UpdateLegacyTransportPathProgress();
 
     switch (m_lootState)
     {
@@ -906,6 +916,193 @@ bool GameObject::IsDynTransport() const
         return false;
 
     return gInfo->type == GAMEOBJECT_TYPE_MO_TRANSPORT || (gInfo->type == GAMEOBJECT_TYPE_TRANSPORT && !gInfo->transport.pause);
+}
+
+uint32 GameObject::GetTransportPeriod() const
+{
+    if (GetGoType() == GAMEOBJECT_TYPE_TRANSPORT && m_goValue.Transport.AnimationInfo)
+        return m_goValue.Transport.AnimationInfo->TotalTime;
+
+    return GetUInt32Value(GAMEOBJECT_FIELD_LEVEL);
+}
+
+void GameObject::SetTransportPathProgress(uint32 pathProgress)
+{
+    m_goValue.Transport.PathProgress = Skyfire::GameObjects::GetTransportDynamicPathProgress(
+        GetGoType(), GetTransportPeriod(), pathProgress);
+    MarkLegacyTransportPathProgressChanged();
+}
+
+std::vector<uint32> const* GameObject::GetPauseTimes() const
+{
+    if (GetGoType() == GAMEOBJECT_TYPE_TRANSPORT && !m_transportPauseTimes.empty())
+        return &m_transportPauseTimes;
+
+    return NULL;
+}
+
+void GameObject::InitializeLegacyTransport()
+{
+    SetUInt32Value(GAMEOBJECT_FIELD_LEVEL, 0);
+
+    m_goValue.Transport.AnimationInfo = sTransportMgr->GetTransportAnimInfo(GetGOInfo()->entry);
+    m_goValue.Transport.CurrentSeg = 0;
+    m_goValue.Transport.PathProgress = 0;
+    m_goValue.Transport.WaitingAtPathStart = false;
+
+    m_transportPauseTimes.clear();
+
+    uint32 const period = GetTransportPeriod();
+    if (GetGOInfo()->transport.pause && period)
+        m_transportPauseTimes.push_back(Skyfire::GameObjects::ClampLegacyTransportPathProgress(GetGOInfo()->transport.pause, period));
+
+    if (!m_transportPauseTimes.empty() && GetGOInfo()->transport.startOpen)
+        m_goValue.Transport.PathProgress = m_transportPauseTimes.front();
+    else
+        m_goValue.Transport.PathProgress = Skyfire::GameObjects::GetInitialLegacyTransportPathProgress(
+            !m_transportPauseTimes.empty(), period, getMSTime());
+
+    uint32 const now = getMSTime();
+    m_goValue.Transport.WaitingAtPathStart = !m_transportPauseTimes.empty() && !GetGOInfo()->transport.startOpen;
+    m_goValue.Transport.StateChangeTime = now;
+    m_goValue.Transport.StateChangeProgress = m_goValue.Transport.PathProgress;
+    SetUInt32Value(GAMEOBJECT_FIELD_LEVEL, now);
+    MarkLegacyTransportPathProgressChanged();
+}
+
+void GameObject::UpdateLegacyTransportPathProgress()
+{
+    uint32 const period = GetTransportPeriod();
+    if (!period)
+        return;
+
+    uint32 newProgress = m_goValue.Transport.PathProgress;
+    bool updateStoppedFlag = false;
+    bool stopped = false;
+    if (m_transportPauseTimes.empty())
+        newProgress = Skyfire::GameObjects::WrapTransportPathProgress(getMSTime(), period);
+    else
+    {
+        uint32 const targetProgress = GetLegacyTransportTargetProgress(GetGoState());
+        uint32 const stopTime = GetUInt32Value(GAMEOBJECT_FIELD_LEVEL);
+        uint32 const now = getMSTime();
+
+        if (stopTime > now)
+        {
+            uint32 const travelTime = stopTime - m_goValue.Transport.StateChangeTime;
+            uint32 const elapsedTime = now - m_goValue.Transport.StateChangeTime;
+            newProgress = Skyfire::GameObjects::InterpolateLegacyTransportPathProgress(
+                m_goValue.Transport.StateChangeProgress, targetProgress, period, elapsedTime, travelTime,
+                HasFlag(OBJECT_FIELD_DYNAMIC_FLAGS, GO_DYNFLAG_LO_INVERTED_MOVEMENT));
+        }
+        else
+        {
+            newProgress = targetProgress;
+            stopped = true;
+        }
+
+        updateStoppedFlag = true;
+    }
+
+    if (updateStoppedFlag)
+        SetLegacyTransportStopped(stopped);
+
+    if (newProgress == m_goValue.Transport.PathProgress)
+        return;
+
+    m_goValue.Transport.PathProgress = newProgress;
+    // Legacy transport movement is client-side from DBC path data; only notify progress changes here.
+    MarkLegacyTransportPathProgressChanged();
+}
+
+void GameObject::HandleLegacyTransportStateChange(GOState oldState, GOState newState)
+{
+    if (GetGoType() != GAMEOBJECT_TYPE_TRANSPORT || m_transportPauseTimes.empty())
+        return;
+
+    if (newState != GOState::GO_STATE_TRANSPORT_ACTIVE && newState != GOState::GO_STATE_TRANSPORT_STOPPED)
+        return;
+
+    uint32 const period = GetTransportPeriod();
+    if (!period)
+        return;
+
+    UpdateLegacyTransportPathProgress();
+
+    if (newState == GOState::GO_STATE_TRANSPORT_STOPPED && m_goValue.Transport.WaitingAtPathStart)
+        m_goValue.Transport.WaitingAtPathStart = false;
+
+    uint32 const targetProgress = GetLegacyTransportTargetProgress(newState);
+    uint32 const now = getMSTime();
+    uint32 const travelTime = Skyfire::GameObjects::GetLegacyTransportTransitionTime(
+        m_goValue.Transport.PathProgress, targetProgress);
+
+    m_goValue.Transport.StateChangeTime = now;
+    m_goValue.Transport.StateChangeProgress = m_goValue.Transport.PathProgress;
+    SetUInt32Value(GAMEOBJECT_FIELD_LEVEL, now + travelTime);
+
+    if (int32(oldState) < int32(GOState::GO_STATE_TRANSPORT_ACTIVE) || oldState == newState)
+    {
+        if (m_goValue.Transport.PathProgress > targetProgress)
+            SetFlag(OBJECT_FIELD_DYNAMIC_FLAGS, GO_DYNFLAG_LO_INVERTED_MOVEMENT);
+        else
+            RemoveFlag(OBJECT_FIELD_DYNAMIC_FLAGS, GO_DYNFLAG_LO_INVERTED_MOVEMENT);
+    }
+    else
+    {
+        int32 const stopFrameCount = int32(m_transportPauseTimes.size());
+        int32 newToOldStateDelta = int32(newState) - int32(oldState);
+        if (newToOldStateDelta < 0)
+            newToOldStateDelta += stopFrameCount + 1;
+
+        int32 oldToNewStateDelta = int32(oldState) - int32(newState);
+        if (oldToNewStateDelta < 0)
+            oldToNewStateDelta += stopFrameCount + 1;
+
+        bool const isAtStartOfPath = m_goValue.Transport.StateChangeProgress == 0;
+        if (oldToNewStateDelta < newToOldStateDelta && !isAtStartOfPath)
+            SetFlag(OBJECT_FIELD_DYNAMIC_FLAGS, GO_DYNFLAG_LO_INVERTED_MOVEMENT);
+        else
+            RemoveFlag(OBJECT_FIELD_DYNAMIC_FLAGS, GO_DYNFLAG_LO_INVERTED_MOVEMENT);
+    }
+
+    SetLegacyTransportStopped(travelTime == 0);
+
+    if (oldState != newState)
+        MarkLegacyTransportPathProgressChanged();
+}
+
+void GameObject::SetLegacyTransportStopped(bool stopped)
+{
+    uint32 const dynamicFlags = GetUInt32Value(OBJECT_FIELD_DYNAMIC_FLAGS);
+    uint32 const updatedFlags = Skyfire::GameObjects::SetLegacyTransportStoppedFlag(dynamicFlags, stopped);
+
+    if (dynamicFlags != updatedFlags)
+        SetUInt32Value(OBJECT_FIELD_DYNAMIC_FLAGS, updatedFlags);
+}
+
+void GameObject::MarkLegacyTransportPathProgressChanged()
+{
+    UpdateUInt32Value(OBJECT_FIELD_DYNAMIC_FLAGS, GetUInt32Value(OBJECT_FIELD_DYNAMIC_FLAGS));
+
+    if (IsInWorld() && !m_objectUpdated)
+    {
+        sObjectAccessor->AddUpdateObject(this);
+        m_objectUpdated = true;
+    }
+}
+
+uint32 GameObject::GetLegacyTransportTargetProgress(GOState state) const
+{
+    if (state == GOState::GO_STATE_TRANSPORT_STOPPED && !m_transportPauseTimes.empty())
+    {
+        if (m_goValue.Transport.WaitingAtPathStart)
+            return 0;
+
+        return m_transportPauseTimes.front();
+    }
+
+    return 0;
 }
 
 bool GameObject::IsDestructibleBuilding() const
@@ -2033,7 +2230,9 @@ void GameObject::SetLootState(LootState state, Unit* unit)
 
 void GameObject::SetGoState(GOState state)
 {
+    GOState const oldState = GetGoState();
     SetByteValue(GAMEOBJECT_FIELD_PERCENT_HEALTH, 0, GetGOStateValue(state));
+    HandleLegacyTransportStateChange(oldState, state);
     sScriptMgr->OnGameObjectStateChanged(this, uint32(state));
     if (m_model && !IsTransport())
     {
@@ -2166,8 +2365,15 @@ void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* t
 
     for (uint16 index = 0; index < m_valuesCount; ++index)
     {
+        bool const forceTransportDynamicFlags =
+            updateType != UPDATETYPE_VALUES &&
+            index == OBJECT_FIELD_DYNAMIC_FLAGS &&
+            IsTransport() &&
+            GetTransportPeriod() != 0;
+
         if ((m_fieldNotifyFlags & flags[index] ||
             ((updateType == UPDATETYPE_VALUES ? _changesMask.GetBit(index) : m_uint32Values[index]) && (flags[index] & visibleFlag)) ||
+            forceTransportDynamicFlags ||
             (index == GAMEOBJECT_FIELD_FLAGS && forcedFlags)))
         {
             updateMask.SetBit(index);
@@ -2189,9 +2395,20 @@ void GameObject::BuildValuesUpdate(uint8 updateType, ByteBuffer* data, Player* t
                         if (ActivateToQuest(target))
                             dynFlags |= GO_DYNFLAG_LO_SPARKLE;
                         break;
+                    case GAMEOBJECT_TYPE_TRANSPORT:
                     case GAMEOBJECT_TYPE_MO_TRANSPORT:
-                        pathProgress = int16(float(m_goValue.Transport.PathProgress) / float(GetUInt32Value(GAMEOBJECT_FIELD_LEVEL)) * 65535.0f);
+                    {
+                        dynFlags = uint16(GetUInt32Value(OBJECT_FIELD_DYNAMIC_FLAGS) & 0xFFFF);
+
+                        uint32 const transportPeriod = GetTransportPeriod();
+                        if (Skyfire::GameObjects::UsesControlledTransportProgress(GetGoType(), transportPeriod) && transportPeriod)
+                        {
+                            uint32 const transportProgress = Skyfire::GameObjects::GetTransportDynamicPathProgress(
+                                GetGoType(), transportPeriod, m_goValue.Transport.PathProgress);
+                            pathProgress = int16(float(transportProgress) / float(transportPeriod) * 65535.0f);
+                        }
                         break;
+                    }
                     default:
                         break;
                 }
@@ -2266,8 +2483,11 @@ uint32 GameObject::GetGOStateValue(GOState state)
         case GOState::GO_STATE_ACTIVE_ALTERNATIVE:
             return 2;
             break;
-        case GOState::GO_STATE_PREPARE_TRANSPORT:
+        case GOState::GO_STATE_TRANSPORT_ACTIVE:
             return 24;
+            break;
+        case GOState::GO_STATE_TRANSPORT_STOPPED:
+            return 25;
             break;
         default:
             return 0;

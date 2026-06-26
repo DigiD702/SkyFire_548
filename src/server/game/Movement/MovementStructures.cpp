@@ -6610,8 +6610,8 @@ MovementStatusElements const* GetMovementStatusElementsSequence(Opcodes opcode)
             return DismissControlledVehicle;
         case SMSG_MOVE_TELEPORT:
             return MoveTeleport;
-            //case SMSG_MOVE_UPDATE_TELEPORT:
-            //    return MoveUpdateTeleport;
+        case SMSG_MOVE_UPDATE_TELEPORT:
+            return MoveUpdateTeleport;
         case CMSG_FORCE_MOVE_ROOT_ACK:
             return ForceMoveRootAck;
         case CMSG_FORCE_MOVE_UNROOT_ACK:
