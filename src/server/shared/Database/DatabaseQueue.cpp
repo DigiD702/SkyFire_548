@@ -7,6 +7,7 @@
 #include "SQLOperation.h"
 #include "Threading/BoostAsioExecutor.h"
 
+#include <future>
 #include <mutex>
 
 namespace Skyfire
@@ -76,6 +77,26 @@ namespace Skyfire
 
         _impl->closed = true;
         _impl->executor.ResetWork();
+    }
+
+    void DatabaseQueue::wait()
+    {
+        std::shared_ptr<std::promise<void> > barrier(new std::promise<void>());
+        std::future<void> ready = barrier->get_future();
+
+        {
+            std::lock_guard<std::mutex> guard(_impl->stateLock);
+            if (_impl->closed)
+                return;
+
+            _impl->executor.Post(
+                [barrier]
+                {
+                    barrier->set_value();
+                });
+        }
+
+        ready.wait();
     }
 
     Asio::IoContextExecutor& DatabaseQueue::GetExecutor()

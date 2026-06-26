@@ -28,6 +28,7 @@ namespace Skyfire
         void enqueue(SQLOperation* operation);
         int run(MySQLConnection* connection);
         void close();
+        void wait();
 
     private:
         struct Impl;

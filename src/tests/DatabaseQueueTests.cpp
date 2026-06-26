@@ -103,12 +103,55 @@ bool TestDatabaseWorkerRunsQueueWithConnection()
     return true;
 }
 
+bool TestQueueWaitBlocksUntilEarlierOperationsFinish()
+{
+    Skyfire::DatabaseQueue queue;
+
+    std::vector<int> completed;
+    std::mutex completedLock;
+    MySQLConnection* connection = reinterpret_cast<MySQLConnection*>(0x3);
+    int runResult = -1;
+
+    std::thread worker([&queue, connection, &runResult]
+    {
+        runResult = queue.run(connection);
+    });
+
+    queue.enqueue(new RecordingOperation(completed, completedLock, 5, connection));
+    queue.wait();
+
+    {
+        std::lock_guard<std::mutex> guard(completedLock);
+        if (completed != std::vector<int>{ 5 })
+        {
+            std::cerr << "DatabaseQueue::wait returned before queued operations completed\n";
+            queue.close();
+            worker.join();
+            return false;
+        }
+    }
+
+    queue.close();
+    worker.join();
+
+    if (runResult != 0)
+    {
+        std::cerr << "DatabaseQueue::run returned " << runResult << '\n';
+        return false;
+    }
+
+    return true;
+}
+
 int main()
 {
     if (!TestQueueRunDrainsQueuedOperations())
         return 1;
 
     if (!TestDatabaseWorkerRunsQueueWithConnection())
+        return 1;
+
+    if (!TestQueueWaitBlocksUntilEarlierOperationsFinish())
         return 1;
 
     return 0;
