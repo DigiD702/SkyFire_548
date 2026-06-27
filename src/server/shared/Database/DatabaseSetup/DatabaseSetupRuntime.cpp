@@ -46,6 +46,28 @@ namespace Database
                 return false;
             }
 
+            while (true)
+            {
+                MYSQL_RES* result = mysql_store_result(setupConnection);
+                if (result)
+                    mysql_free_result(result);
+                else if (mysql_field_count(setupConnection) != 0)
+                {
+                    SF_LOG_ERROR(context.LogFilter, "%s: %s", queryContext, mysql_error(setupConnection));
+                    return false;
+                }
+
+                int nextResult = mysql_next_result(setupConnection);
+                if (nextResult > 0)
+                {
+                    SF_LOG_ERROR(context.LogFilter, "%s: %s", queryContext, mysql_error(setupConnection));
+                    return false;
+                }
+
+                if (nextResult < 0)
+                    break;
+            }
+
             return true;
         }
 

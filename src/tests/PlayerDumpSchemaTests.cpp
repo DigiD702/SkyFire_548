@@ -130,6 +130,20 @@ namespace
 
         return passed;
     }
+
+    bool TestCharacterPetColumnPositionsMatchSchema()
+    {
+        std::vector<std::string> columns =
+            ReadTableColumns(std::string(SKYFIRE_SOURCE_DIR) + "/sql/base/characters_database.sql", "character_pet");
+
+        bool passed = true;
+        passed &= Expect(!columns.empty(), "character_pet table columns should be discovered");
+        passed &= ExpectField(columns, Skyfire::PlayerDump::PetFields::Id, "id");
+        passed &= ExpectField(columns, Skyfire::PlayerDump::PetFields::Owner, "owner");
+        passed &= ExpectField(columns, 12, "active");
+
+        return passed;
+    }
 }
 
 int main()
@@ -137,6 +151,7 @@ int main()
     bool passed = true;
 
     passed &= TestCharacterDumpColumnPositionsMatchSchema();
+    passed &= TestCharacterPetColumnPositionsMatchSchema();
     passed &= TestPetDeclinedNameColumnPositionsMatchSchema();
 
     return passed ? 0 : 1;

@@ -100,10 +100,9 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
     }
     else if (current)
     {
-        // Current pet (slot 0)
-        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_PET_BY_ENTRY_AND_SLOT);
+        // Current pet
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_ACTIVE_PET);
         stmt->setUInt32(0, ownerid);
-        stmt->setUInt8(1, uint8(PET_SAVE_AS_CURRENT));
     }
     else if (petEntry)
     {
@@ -111,16 +110,14 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_PET_BY_ENTRY_AND_SLOT_2);
         stmt->setUInt32(0, ownerid);
         stmt->setUInt32(1, petEntry);
-        stmt->setUInt8(2, uint8(PET_SAVE_AS_CURRENT));
-        stmt->setUInt8(3, uint8(PET_SAVE_LAST_STABLE_SLOT));
+        stmt->setUInt8(2, uint8(PET_SAVE_LAST_STABLE_SLOT));
     }
     else
     {
         // Any current or other non-stabled pet (for hunter "call pet")
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_CHAR_PET_BY_SLOT);
         stmt->setUInt32(0, ownerid);
-        stmt->setUInt8(1, uint8(PET_SAVE_AS_CURRENT));
-        stmt->setUInt8(2, uint8(PET_SAVE_LAST_STABLE_SLOT));
+        stmt->setUInt8(1, uint8(PET_SAVE_LAST_STABLE_SLOT));
     }
 
     result = CharacterDatabase.Query(stmt);
@@ -247,11 +244,10 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
         }
     }
 
-    // set current pet as current
-    // 0=current
-    // 1..MAX_PET_STABLES in stable slot
-    // PET_SAVE_NOT_IN_SLOT(100) = not stable slot (summoning))
-    if (fields[7].GetUInt8())
+    bool const isActivePet = fields[17].GetBool();
+
+    // set loaded pet as current
+    if (!isActivePet || fields[7].GetUInt8())
     {
         SQLTransaction trans = CharacterDatabase.BeginTransaction();
 
@@ -266,6 +262,15 @@ bool Pet::LoadPetFromDB(Player* owner, uint32 petEntry, uint32 petnumber, bool c
         stmt->setUInt8(0, uint8(PET_SAVE_AS_CURRENT));
         stmt->setUInt32(1, ownerid);
         stmt->setUInt32(2, m_charmInfo->GetPetNumber());
+        trans->Append(stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_PET_ACTIVE_BY_OWNER);
+        stmt->setUInt32(0, ownerid);
+        trans->Append(stmt);
+
+        stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_PET_ACTIVE_BY_ID);
+        stmt->setUInt32(0, ownerid);
+        stmt->setUInt32(1, m_charmInfo->GetPetNumber());
         trans->Append(stmt);
 
         CharacterDatabase.CommitTransaction(trans);
@@ -378,6 +383,10 @@ void Pet::SavePetToDB(PetSaveMode mode)
         mode = PET_SAVE_NOT_IN_SLOT;
     }
 
+    bool const saveAsActive = mode == PET_SAVE_AS_CURRENT ||
+        (getPetType() == PetType::HUNTER_PET && mode > PET_SAVE_LAST_STABLE_SLOT && owner->GetPetGUID() == GetGUID());
+    PetSaveMode const dbMode = saveAsActive ? PET_SAVE_AS_CURRENT : mode;
+
     uint32 curhealth = GetHealth();
     uint32 curmana = GetPower(POWER_MANA);
 
@@ -416,6 +425,13 @@ void Pet::SavePetToDB(PetSaveMode mode)
             trans->Append(stmt);
         }
 
+        if (saveAsActive)
+        {
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPD_CHAR_PET_ACTIVE_BY_OWNER);
+            stmt->setUInt32(0, ownerLowGUID);
+            trans->Append(stmt);
+        }
+
         // prevent existence another hunter pet in PET_SAVE_AS_CURRENT and PET_SAVE_NOT_IN_SLOT
         if (getPetType() == PetType::HUNTER_PET && (mode == PET_SAVE_AS_CURRENT || mode > PET_SAVE_LAST_STABLE_SLOT))
         {
@@ -428,7 +444,7 @@ void Pet::SavePetToDB(PetSaveMode mode)
 
         // save pet
         std::ostringstream ss;
-        ss << "INSERT INTO character_pet (id, entry,  owner, modelid, level, exp, Reactstate, slot, name, renamed, curhealth, curmana, abdata, savetime, CreatedBySpell, PetType, PetSpecId) "
+        ss << "INSERT INTO character_pet (id, entry,  owner, modelid, level, exp, Reactstate, slot, name, renamed, active, curhealth, curmana, abdata, savetime, CreatedBySpell, PetType, PetSpecId) "
             << "VALUES ("
             << m_charmInfo->GetPetNumber() << ','
             << GetEntry() << ','
@@ -437,9 +453,10 @@ void Pet::SavePetToDB(PetSaveMode mode)
             << uint32(getLevel()) << ','
             << GetUInt32Value(UNIT_FIELD_PET_EXPERIENCE) << ','
             << uint32(GetReactState()) << ','
-            << uint32(mode) << ", '"
+            << uint32(dbMode) << ", '"
             << name.c_str() << "', "
             << uint32(HasByteFlag(UNIT_FIELD_SHAPESHIFT_FORM, 2, UNIT_CAN_BE_RENAMED) ? 0 : 1) << ','
+            << uint32(saveAsActive ? 1 : 0) << ','
             << curhealth << ','
             << curmana << ", '";
 

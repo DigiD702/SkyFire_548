@@ -907,6 +907,7 @@ CREATE TABLE `character_pet` (
   `Reactstate` tinyint unsigned NOT NULL DEFAULT '0',
   `name` varchar(21) NOT NULL DEFAULT 'Pet',
   `renamed` tinyint unsigned NOT NULL DEFAULT '0',
+  `active` tinyint unsigned NOT NULL DEFAULT '0',
   `slot` tinyint unsigned NOT NULL DEFAULT '0',
   `curhealth` int unsigned NOT NULL DEFAULT '1',
   `curmana` int unsigned NOT NULL DEFAULT '0',
