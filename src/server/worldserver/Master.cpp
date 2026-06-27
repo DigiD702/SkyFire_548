@@ -244,7 +244,7 @@ namespace
             SF_LOG_ERROR("server.worldserver", "%s", plan.Error.c_str());
             return false;
         }
-        bool applyRequiredSql = options.AutoSetup && !requiredBaseSqlPaths.empty();
+        bool applyRequiredSql = plan.ShouldInstallBase && !requiredBaseSqlPaths.empty();
         Skyfire::Database::LogSetupPlan(plan, updates.size(), applyRequiredSql, context);
 
         if (plan.ShouldInstallBase)
@@ -256,7 +256,7 @@ namespace
                 return false;
         }
 
-        if (options.AutoSetup)
+        if (applyRequiredSql)
         {
             for (std::filesystem::path const& requiredBaseSqlPath : requiredBaseSqlPaths)
             {

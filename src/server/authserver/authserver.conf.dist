@@ -2,7 +2,7 @@
 #   SkyFire Auth Server configuration file    #
 ###############################################
 [authserver]
-ConfVersion=2026310601
+ConfVersion=2026310602
 
 ###################################################################################################
 # SECTION INDEX
@@ -145,7 +145,8 @@ LoginDatabaseInfo = "127.0.0.1;3306;skyfire;skyfire;auth"
 #        Description: Enables auth database base setup during authserver startup.
 #        Important:   Disabled by default. Update checks still run when LoginDatabase.SqlPath
 #                     is configured. When enabled, setup failures stop startup before the auth
-#                     listener is opened.
+#                     listener is opened. This can stay enabled after setup; populated schemas
+#                     skip base setup and continue with update checks.
 #        Default:     0 - (Disabled)
 #                     1 - (Enabled)
 

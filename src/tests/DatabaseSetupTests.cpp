@@ -381,22 +381,58 @@ namespace
         return passed;
     }
 
-    bool TestExistingWorldDatabaseRequiresStoredProcedures()
+    bool TestExistingWorldDatabaseKeepsAutoSetupEnabled()
     {
         Skyfire::Database::SetupOptions options =
-            Skyfire::Database::MakeWorldDatabaseSetupOptions(true, false, "sql", "");
+            Skyfire::Database::MakeWorldDatabaseSetupOptions(true, true, "sql", "");
 
         Skyfire::Database::SetupState state;
         state.DatabaseExists = true;
         state.SchemaTableCount = 1200;
         state.UpdateTrackingExists = true;
 
+        std::vector<Skyfire::Database::SqlUpdateFile> updates =
+        {
+            { "2026-06-22_world_00.sql", "sql/updates/world/2026-06-22_world_00.sql", "hash-a" }
+        };
+
         Skyfire::Database::SetupPlan plan =
-            Skyfire::Database::BuildWorldDatabaseSetupPlan(options, state, false, false, {});
+            Skyfire::Database::BuildWorldDatabaseSetupPlan(options, state, false, false, updates);
 
         bool passed = true;
-        passed &= Expect(!plan.IsValid(), "Existing world database setup should require stored procedures");
-        passed &= Expect(!plan.Error.empty(), "Missing stored procedures should explain why setup stopped");
+        passed &= Expect(plan.IsValid(), "Existing world database should keep running when AutoSetup remains enabled");
+        passed &= Expect(!plan.ShouldCreateDatabase, "Existing world database should not be created when AutoCreate remains enabled");
+        passed &= Expect(!plan.ShouldInstallBase, "Existing world database should not reinstall base SQL");
+        passed &= Expect(plan.PendingUpdates.size() == 1, "Existing world database should still queue unapplied updates");
+
+        return passed;
+    }
+
+    bool TestExistingAuthDatabaseKeepsAutoCreateEnabled()
+    {
+        Skyfire::Database::SetupOptions options = Skyfire::Database::MakeAuthDatabaseSetupOptions(true, true, "sql");
+
+        Skyfire::Database::SetupState state;
+        state.DatabaseExists = true;
+        state.SchemaTableCount = 12;
+        state.UpdateTrackingExists = true;
+        state.AppliedUpdates.insert("2026-01-23_auth_00.sql");
+        state.AppliedUpdateHashes["2026-01-23_auth_00.sql"] = "hash-a";
+
+        std::vector<Skyfire::Database::SqlUpdateFile> updates =
+        {
+            { "2026-01-23_auth_00.sql", "sql/updates/auth/2026-01-23_auth_00.sql", "hash-a" },
+            { "2026-06-26_auth_00.sql", "sql/updates/auth/2026-06-26_auth_00.sql", "hash-b" }
+        };
+
+        Skyfire::Database::SetupPlan plan =
+            Skyfire::Database::BuildAuthDatabaseSetupPlan(options, state, true, updates);
+
+        bool passed = true;
+        passed &= Expect(plan.IsValid(), "Existing auth database should keep running when AutoSetup and AutoCreate remain enabled");
+        passed &= Expect(!plan.ShouldCreateDatabase, "Existing auth database should not be created when AutoCreate remains enabled");
+        passed &= Expect(!plan.ShouldInstallBase, "Existing auth database should not reinstall base SQL");
+        passed &= Expect(plan.PendingUpdates.size() == 1, "Existing auth database should still queue unapplied updates");
 
         return passed;
     }
@@ -778,7 +814,8 @@ int main()
     passed &= TestEmptyWorldDatabaseRequiresExternalBase();
     passed &= TestExistingWorldDatabaseChecksUpdatesWhenAutoSetupIsDisabled();
     passed &= TestEmptyWorldDatabaseRequiresStoredProcedures();
-    passed &= TestExistingWorldDatabaseRequiresStoredProcedures();
+    passed &= TestExistingWorldDatabaseKeepsAutoSetupEnabled();
+    passed &= TestExistingAuthDatabaseKeepsAutoCreateEnabled();
     passed &= TestExistingAuthDatabaseSkipsAppliedUpdates();
     passed &= TestExistingAuthDatabaseRejectsChangedAppliedUpdate();
     passed &= TestExistingAuthDatabaseCanBypassChangedAppliedUpdate();
