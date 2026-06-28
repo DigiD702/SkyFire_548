@@ -1,0 +1,16 @@
+﻿EXACT_ROW_COUNTS
+creature_template	57164	57517
+creature	224086	315216
+gameobject_template	36010	41363
+gameobject	70584	170208
+quest_template	17930	18028
+quest_objective	16160	17399
+smart_scripts	15926	43699
+conditions	9421	22412
+creature_text	7183	23112
+spell_script_names	1110	4888
+scene_template	4	73
+terrain_phase_info	0	0
+spell_proc	0	0
+hotfix_data	0	1
+waypoints	1644	6088

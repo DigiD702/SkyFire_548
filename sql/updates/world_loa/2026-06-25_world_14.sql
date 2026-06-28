@@ -1,0 +1,4 @@
+-- Core mechanics: hotfix_data row from LOA (LOA has 1, world has 0).
+-- terrain_phase_info and spell_proc are empty in both DBs — no port available yet.
+-- hotfix_data port DISABLED: item 32549 hotfix crashes client on login — see 2026-06-28_world_09.sql.
+-- Status: local-only (not pushed upstream)

@@ -1,0 +1,15 @@
+﻿# DBErrors Backlog
+
+Source: `C:\SkyFire_548\DBErrors.log`
+Total lines: 83285
+
+| Priority | Category | Count | LOA hint | Sample |
+|----------|----------|------:|----------|--------|
+| P5 | uncategorized | 81860 | Manual triage | Gameobject (Entry: 202357 GoType: 2) have data0=0 but lock (Id: 0) not found. |
+| P2 | unbound_cpp_script | 990 | Match ScriptName in loa templates | Script named 'spell_dk_death_strike_enabler' does not have a script name assigned in database. |
+| P4 | gameobject_missing_spell_dbc | 120 | Often DBC-limited; verify Wowhead | Gameobject (Entry: 181105 GoType: 22) have data0=27873 but Spell (Entry 27873) not exist. |
+| P3 | creature_faction | 105 | loa.creature_template faction columns | Creature (Entry: 72048) has non-existing faction_H template (0). |
+| P0 | missing_gameobject_template | 100 | loa.gameobject_template INSERT | Table `gameobject` has gameobject (GUID: 200011) with non existing gameobject entry 212922, skipped. |
+| P4 | gameobject_missing_spellfocus_dbc | 60 | Often DBC-limited; verify Wowhead | GameObject (Entry: 212595 GoType: 8) have data0=5705760 but SpellFocus (Id: 5705760) not exist. |
+| P0 | missing_creature_template | 40 | loa.creature_template INSERT | Table `creature` has creature (GUID: 237138) with non existing creature entry 68993, skipped. |
+| P5 | smartai_validation | 10 | Compare loa.smart_scripts | SmartAIMgr: Entry 55054 SourceType 0 Event 1 Action 33 Kill Credit: There is a killcredit spell for creatureEntry 670... |

@@ -1,0 +1,3 @@
+-- Portable delta: hotfix_data
+-- DISABLED: LOA row (item 32549 ITEM_SPARSE) crashes 5.4.8 client on login (Error #132 stack_overflow).
+-- See 2026-06-28_world_09.sql. Baseline SFDB keeps hotfix_data empty.

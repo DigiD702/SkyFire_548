@@ -1,0 +1,366 @@
+﻿TABLE_COUNTS			
+world	174
+loa	230
+trinitycore	247
+trinitycore_hotfixes	467
+TABLES_ONLY_IN_LOA			
+achievement_reward_locale
+areatrigger_queststarter
+bad_word
+bad_word_mail
+battle_pay_boost_items
+battle_pay_entry
+battle_pay_group
+battle_pay_product
+battle_pay_product_items
+battle_pet_item_to_species
+battle_pet_wild_pool
+bonus_loot_template
+broadcast_text
+broadcast_text_locale
+broken_quests
+challenge_mode_rewards
+characters_npcbot_logs
+creature_difficulty
+creature_loot_currency
+creature_scaling
+creature_sparring_template
+creature_template_locale
+creature_text_locale
+db_version_ytdb
+gameobject_addon
+gameobject_scripts
+gameobject_swap
+gameobject_template_addon
+gameobject_template_locale
+gossip_menu_option_action
+gossip_menu_option_box
+gossip_menu_option_locale
+guild_challenge_reward
+holiday_dates
+instance_mogushan_system
+item_template_locale
+itemextendedcost_18414
+legendary_quest_loot_template
+letter_analogs
+lfg_dungeon_template
+locales_battle_pay_entry
+locales_battle_pay_group
+locales_battle_pay_product
+npc_teleport
+npc_text_locale
+object_visibility
+object_visibility_state
+page_text_locale
+personal_loot_item
+personal_loot_template
+pet_scaling
+phase_definitions
+player_class_spells
+playercreateinfo_cast_spell
+playercreateinfo_skills
+players_reports_status
+points_of_interest_locale
+quest_details
+quest_objectives_locale
+quest_offer_reward
+quest_offer_reward_locale
+quest_request_items
+quest_request_items_locale
+quest_template_addon
+quest_template_locale
+reclass_routine
+scenario_poi
+scenario_poi_points
+spell_areatrigger_template
+spell_custom_attribute
+spellmisc_dbc
+trinity_string
+updates
+updates_include
+world_drop_loot_template
+world_map_template
+TABLES_ONLY_IN_WORLD			
+creature_transport
+db_script_string
+db_update
+lfg_entrances
+locales_achievement_reward
+locales_creature
+locales_creature_text
+locales_gameobject
+locales_gossip_menu_option
+locales_item
+locales_npc_text
+locales_page_text
+locales_points_of_interest
+locales_quest
+locales_quest_objective
+playercreateinfo_spell
+playercreateinfo_spell_cast
+skyfire_db_updates
+skyfire_string
+spelldifficulty_dbc
+SHARED_WORLD_LOA_COLUMN_DIFFS			
+conditions	SourceGroup	mediumint unsigned	int unsigned
+conditions	ConditionValue1	mediumint unsigned	int unsigned
+conditions	ConditionValue2	mediumint unsigned	int unsigned
+conditions	ConditionValue3	mediumint unsigned	int unsigned
+creature_loot_template	item	mediumint unsigned	mediumint
+creature_loot_template	lootmode	smallint unsigned	set('REGULAR','DUNGEON_NORMAL','DUNGEON_HEROIC','RAID_10MAN_NORMAL','RAID_25MAN_NORMAL','RAID_10MAN_HEROIC','RAID_25MAN_HEROIC','RAID_25MAN_LFR','DUNGEON_CHALLENGE','RAID_40MAN','UNUSED','SCENARIO_HEROIC','SCENARIO_NORMAL','UNUSED2','RAID_1025MAN_FLEX')
+creature_loot_template	maxcount	tinyint unsigned	smallint unsigned
+creature_template	minlevel	smallint	tinyint unsigned
+creature_template	maxlevel	smallint	tinyint unsigned
+creature_template	npcflag	int	bigint unsigned
+gameobject_template	data0	int unsigned	int unsigned
+gameobject_template	data24	int	int unsigned
+gameobject_template	data25	int	int unsigned
+gameobject_template	data26	int	int unsigned
+gameobject_template	data27	int	int unsigned
+gameobject_template	data28	int	int unsigned
+gameobject_template	data29	int	int unsigned
+gameobject_template	data30	int	int unsigned
+gameobject_template	data31	int	int unsigned
+gameobject_template	unkInt32	int	int unsigned
+item_template	Flags	int unsigned	bigint
+item_template	stat_unk2_1	int	float
+item_template	stat_unk2_2	int	float
+item_template	stat_unk2_3	int	float
+item_template	stat_unk2_4	int	float
+item_template	stat_unk2_5	int	float
+item_template	stat_unk2_6	int	float
+item_template	stat_unk2_7	int	float
+item_template	stat_unk2_8	int	float
+item_template	stat_unk2_9	int	float
+item_template	stat_unk2_10	int	float
+quest_objective	index	tinyint unsigned	tinyint
+quest_template	Id	mediumint unsigned	int unsigned
+quest_template	RewardMoney	int unsigned	int
+quest_template	RewardSpell	mediumint unsigned	int unsigned
+quest_template	RewardHonor	int	int unsigned
+quest_template	RewardArenaPoints	smallint unsigned	int unsigned
+quest_template	RewardChoiceItemId1	mediumint unsigned	int unsigned
+quest_template	RewardChoiceItemId2	mediumint unsigned	int unsigned
+quest_template	RewardChoiceItemId3	mediumint unsigned	int unsigned
+quest_template	RewardChoiceItemId4	mediumint unsigned	int unsigned
+quest_template	RewardChoiceItemId5	mediumint unsigned	int unsigned
+quest_template	RewardChoiceItemId6	mediumint unsigned	int unsigned
+quest_template	RewardFactionId1	smallint unsigned	int unsigned
+quest_template	RewardFactionId2	smallint unsigned	int unsigned
+quest_template	RewardFactionId3	smallint unsigned	int unsigned
+quest_template	RewardFactionId4	smallint unsigned	int unsigned
+quest_template	RewardFactionId5	smallint unsigned	int unsigned
+quest_template	RewardCurrencyId1	smallint unsigned	int unsigned
+quest_template	RewardCurrencyId2	smallint unsigned	int unsigned
+quest_template	RewardCurrencyId3	smallint unsigned	int unsigned
+quest_template	RewardCurrencyId4	smallint unsigned	int unsigned
+smart_scripts	event_flags	tinyint unsigned	int unsigned
+COLUMNS_ONLY_IN_LOA			
+creature_template	difficulty_entry_4	mediumint unsigned
+creature_template	difficulty_entry_5	mediumint unsigned
+creature_template	femaleName	char(100)
+creature_template	faction	smallint unsigned
+creature_template	npcflag2	int unsigned
+creature_template	rank	tinyint unsigned
+creature_template	VignetteID	int unsigned
+creature_template	TrackingQuestID	int unsigned
+creature_template	VerifiedBuild	smallint
+gameobject_template	VerifiedBuild	smallint
+item_template	ScalingStatValue	int
+item_template	RequiredDisenchantSkill	int
+item_template	VerifiedBuild	smallint
+quest_template	QuestType	tinyint unsigned
+quest_template	QuestLevel	smallint
+quest_template	QuestPackageID	int unsigned
+quest_template	QuestSortID	smallint
+quest_template	QuestInfoID	smallint unsigned
+quest_template	SuggestedGroupNum	tinyint unsigned
+quest_template	RewardNextQuest	int unsigned
+quest_template	RewardXPDifficulty	int unsigned
+quest_template	RewardBonusMoney	int unsigned
+quest_template	RewardDisplaySpell	int unsigned
+quest_template	RewardKillHonor	int unsigned
+quest_template	StartItem	int unsigned
+quest_template	FlagsEx	int unsigned
+quest_template	RewardItem1	int unsigned
+quest_template	RewardAmount1	int unsigned
+quest_template	RewardItem2	int unsigned
+quest_template	RewardAmount2	int unsigned
+quest_template	RewardItem3	int unsigned
+quest_template	RewardAmount3	int unsigned
+quest_template	RewardItem4	int unsigned
+quest_template	RewardAmount4	int unsigned
+quest_template	ItemDrop1	int unsigned
+quest_template	ItemDropQuantity1	int unsigned
+quest_template	ItemDrop2	int unsigned
+quest_template	ItemDropQuantity2	int unsigned
+quest_template	ItemDrop3	int unsigned
+quest_template	ItemDropQuantity3	int unsigned
+quest_template	ItemDrop4	int unsigned
+quest_template	ItemDropQuantity4	int unsigned
+quest_template	RewardChoiceItemQuantity1	int unsigned
+quest_template	RewardChoiceItemQuantity2	int unsigned
+quest_template	RewardChoiceItemQuantity3	int unsigned
+quest_template	RewardChoiceItemQuantity4	int unsigned
+quest_template	RewardChoiceItemQuantity5	int unsigned
+quest_template	RewardChoiceItemQuantity6	int unsigned
+quest_template	POIContinent	int unsigned
+quest_template	POIx	float
+quest_template	POIy	float
+quest_template	POIPriority	int
+quest_template	RewardTitle	int unsigned
+quest_template	RewardSkillLineID	int unsigned
+quest_template	RewardNumSkillUps	int unsigned
+quest_template	PortraitGiver	int unsigned
+quest_template	PortraitTurnIn	int unsigned
+quest_template	RewardFactionValue1	int
+quest_template	RewardFactionOverride1	int
+quest_template	RewardFactionValue2	int
+quest_template	RewardFactionOverride2	int
+quest_template	RewardFactionValue3	int
+quest_template	RewardFactionOverride3	int
+quest_template	RewardFactionValue4	int
+quest_template	RewardFactionOverride4	int
+quest_template	RewardFactionValue5	int
+quest_template	RewardFactionOverride5	int
+quest_template	RewardFactionFlags	int unsigned
+quest_template	RewardCurrencyQty1	int unsigned
+quest_template	RewardCurrencyQty2	int unsigned
+quest_template	RewardCurrencyQty3	int unsigned
+quest_template	RewardCurrencyQty4	int unsigned
+quest_template	AcceptedSoundKitID	int unsigned
+quest_template	CompleteSoundKitID	int unsigned
+quest_template	AreaGroupID	int unsigned
+quest_template	TimeAllowed	bigint
+quest_template	AllowableRaces	bigint unsigned
+quest_template	LogTitle	mediumtext
+quest_template	LogDescription	mediumtext
+quest_template	QuestDescription	mediumtext
+quest_template	AreaDescription	mediumtext
+quest_template	PortraitGiverText	mediumtext
+quest_template	PortraitGiverName	mediumtext
+quest_template	PortraitTurnInText	mediumtext
+quest_template	PortraitTurnInName	mediumtext
+quest_template	QuestCompletionLog	mediumtext
+quest_template	VerifiedBuild	int
+smart_scripts	target_param4	int unsigned
+COLUMNS_ONLY_IN_WORLD			
+creature_template	faction_A	smallint unsigned
+creature_template	faction_H	smallint unsigned
+creature_template	npc_rank	tinyint unsigned
+creature_template	ModLevel	tinyint unsigned
+creature_template	WDBVerified	smallint
+gameobject_template	faction	smallint unsigned
+gameobject_template	flags	int unsigned
+gameobject_template	WDBVerified	smallint
+item_template	WDBVerified	smallint
+quest_template	Method	tinyint unsigned
+quest_template	Level	smallint
+quest_template	MaxLevel	smallint
+quest_template	ZoneOrSort	smallint
+quest_template	Type	smallint unsigned
+quest_template	SuggestedPlayers	tinyint unsigned
+quest_template	LimitTime	int unsigned
+quest_template	RequiredClasses	smallint unsigned
+quest_template	RequiredRaces	mediumint unsigned
+quest_template	RequiredSkillId	smallint unsigned
+quest_template	RequiredSkillPoints	smallint unsigned
+quest_template	RequiredMinRepFaction	smallint unsigned
+quest_template	RequiredMaxRepFaction	smallint unsigned
+quest_template	RequiredMinRepValue	mediumint
+quest_template	RequiredMaxRepValue	mediumint
+quest_template	PrevQuestId	mediumint
+quest_template	NextQuestId	mediumint
+quest_template	ExclusiveGroup	mediumint
+quest_template	NextQuestIdChain	mediumint unsigned
+quest_template	RewardXPId	tinyint unsigned
+quest_template	RewardMoneyMaxLevel	int unsigned
+quest_template	RewardSpellCast	int
+quest_template	RewardHonorMultiplier	float
+quest_template	RewardMailTemplateId	mediumint unsigned
+quest_template	RewardMailDelay	int unsigned
+quest_template	SourceItemId	mediumint unsigned
+quest_template	SourceSpellId	mediumint unsigned
+quest_template	Flags2	int unsigned
+quest_template	SpecialFlags	tinyint unsigned
+quest_template	MinimapTargetMark	tinyint unsigned
+quest_template	RewardTitleId	tinyint unsigned
+quest_template	RewardTalents	tinyint unsigned
+quest_template	RewardSkillId	smallint unsigned
+quest_template	RewardSkillPoints	tinyint unsigned
+quest_template	RewardReputationMask	tinyint unsigned
+quest_template	QuestGiverPortrait	mediumint unsigned
+quest_template	QuestTurnInPortrait	mediumint unsigned
+quest_template	RewardPackageItemId	smallint unsigned
+quest_template	RewardItemId1	mediumint unsigned
+quest_template	RewardItemId2	mediumint unsigned
+quest_template	RewardItemId3	mediumint unsigned
+quest_template	RewardItemId4	mediumint unsigned
+quest_template	RewardItemCount1	smallint unsigned
+quest_template	RewardItemCount2	smallint unsigned
+quest_template	RewardItemCount3	smallint unsigned
+quest_template	RewardItemCount4	smallint unsigned
+quest_template	RewardChoiceItemCount1	smallint unsigned
+quest_template	RewardChoiceItemCount2	smallint unsigned
+quest_template	RewardChoiceItemCount3	smallint unsigned
+quest_template	RewardChoiceItemCount4	smallint unsigned
+quest_template	RewardChoiceItemCount5	smallint unsigned
+quest_template	RewardChoiceItemCount6	smallint unsigned
+quest_template	RewardFactionValueId1	mediumint
+quest_template	RewardFactionValueId2	mediumint
+quest_template	RewardFactionValueId3	mediumint
+quest_template	RewardFactionValueId4	mediumint
+quest_template	RewardFactionValueId5	mediumint
+quest_template	RewardFactionValueIdOverride1	int
+quest_template	RewardFactionValueIdOverride2	int
+quest_template	RewardFactionValueIdOverride3	int
+quest_template	RewardFactionValueIdOverride4	int
+quest_template	RewardFactionValueIdOverride5	int
+quest_template	PointMapId	smallint unsigned
+quest_template	PointX	float
+quest_template	PointY	float
+quest_template	PointOption	mediumint unsigned
+quest_template	Title	text
+quest_template	Objectives	text
+quest_template	Details	text
+quest_template	EndText	text
+quest_template	OfferRewardText	text
+quest_template	RequestItemsText	text
+quest_template	CompletedText	text
+quest_template	RequiredSourceItemId1	mediumint unsigned
+quest_template	RequiredSourceItemId2	mediumint unsigned
+quest_template	RequiredSourceItemId3	mediumint unsigned
+quest_template	RequiredSourceItemId4	mediumint unsigned
+quest_template	RequiredSourceItemCount1	smallint unsigned
+quest_template	RequiredSourceItemCount2	smallint unsigned
+quest_template	RequiredSourceItemCount3	smallint unsigned
+quest_template	RequiredSourceItemCount4	smallint unsigned
+quest_template	RewardCurrencyCount1	smallint unsigned
+quest_template	RewardCurrencyCount2	smallint unsigned
+quest_template	RewardCurrencyCount3	smallint unsigned
+quest_template	RewardCurrencyCount4	smallint unsigned
+quest_template	QuestGiverTextWindow	text
+quest_template	QuestGiverTargetName	text
+quest_template	QuestTurnTextWindow	text
+quest_template	QuestTurnTargetName	text
+quest_template	SoundAccept	smallint unsigned
+quest_template	SoundTurnIn	smallint unsigned
+quest_template	DetailsEmote1	smallint unsigned
+quest_template	DetailsEmote2	smallint unsigned
+quest_template	DetailsEmote3	smallint unsigned
+quest_template	DetailsEmote4	smallint unsigned
+quest_template	DetailsEmoteDelay1	int unsigned
+quest_template	DetailsEmoteDelay2	int unsigned
+quest_template	DetailsEmoteDelay3	int unsigned
+quest_template	DetailsEmoteDelay4	int unsigned
+quest_template	EmoteOnIncomplete	smallint unsigned
+quest_template	EmoteOnComplete	smallint unsigned
+quest_template	OfferRewardEmote1	smallint unsigned
+quest_template	OfferRewardEmote2	smallint unsigned
+quest_template	OfferRewardEmote3	smallint unsigned
+quest_template	OfferRewardEmote4	smallint unsigned
+quest_template	OfferRewardEmoteDelay1	int unsigned
+quest_template	OfferRewardEmoteDelay2	int unsigned
+quest_template	OfferRewardEmoteDelay3	int unsigned
+quest_template	OfferRewardEmoteDelay4	int unsigned
+quest_template	WDBVerified	smallint

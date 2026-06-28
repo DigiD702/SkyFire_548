@@ -13,6 +13,7 @@ set(scripts_STAT_SRCS
   Pandaria/StormstoutBrewery/stormstout_brewery.h
   Pandaria/TempleOfJadeSerpent/temple_of_jade_serpent.h
   Pandaria/TempleOfJadeSerpent/instance_temple_of_jade_serpent.cpp
+  Pandaria/TempleOfJadeSerpent/boss_wise_mari.cpp
 )
 
 message("  -> Prepared: Pandaria")

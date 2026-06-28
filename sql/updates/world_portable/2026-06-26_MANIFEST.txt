@@ -1,0 +1,18 @@
+﻿# Portable SQL manifest
+# Generated: 2026-06-26 12:24:15
+# Apply order: numbered delta files, then standalone scripts below.
+
+
+# Standalone scripts (already portable from sql/updates/world/)
+2026-06-25_world_08.sql
+2026-06-25_world_19.sql
+2026-06-25_world_20.sql
+2026-06-25_world_27.sql
+2026-06-25_world_28.sql
+2026-06-25_world_29.sql
+2026-06-25_world_36.sql
+2026-06-25_world_43.sql
+2026-06-25_world_50.sql
+2026-06-25_world_57.sql
+2026-06-25_world_64.sql
+2026-06-25_world_71.sql

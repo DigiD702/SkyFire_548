@@ -1,25 +1,21 @@
 # Pending SQL Updates
 
-Use this directory for SQL changes that need to be tested against a local or
-staging database before they are promoted into the normal update stream.
+This directory is no longer the primary workflow for MoP porting work.
 
-The server database updater does not read files from this directory. Updates in
-this area must be applied manually while testing. After an update is verified,
-move it into the matching `sql/updates/<database>` directory so the normal
-database setup and update tracking system can apply it.
+**Use instead:**
 
-## Layout
+- `sql/updates/world/` — all new SQL updates
+- `sql/updates/PORTING_LOG.md` — record of each update for future upstream push
+- `tools/db-port/` — audit tooling and staging apply scripts
 
-- `auth` - pending auth database updates
-- `characters` - pending character database updates
-- `world` - pending world database updates
+The server database updater reads `sql/updates/<database>` when AutoSetup is enabled.
 
-## Promotion Checklist
+## Staging test workflow
 
-1. Add the test SQL file to the matching pending folder.
-2. Apply it manually to a test database.
-3. Verify server startup, affected commands, and any in-game behavior.
-4. Rename or adjust the file for the mainstream update sequence.
-5. Move the verified file into `sql/updates/<database>`.
-6. Let the database setup system record it through `skyfire_db_updates` and
-   `db_update`.
+```powershell
+cd C:\SkyFire_548\tools\db-port
+.\clone_staging.ps1
+.\apply_updates_to_staging.ps1 -Filter '2026-06-25_world_*.sql'
+```
+
+Do **not** push to any remote repository until updates are reviewed and tested.

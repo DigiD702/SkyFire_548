@@ -1,0 +1,42 @@
+-- Portable delta: spell_script_names (part 43)
+-- Generated: 2026-06-26 13:01:26
+
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148677,'spell_paragon_reave_selector');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148681,'spell_paragon_reave_launcher');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148740,'spell_create_timeless_item');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148741,'spell_siege_of_orgrimmar_strength_in_numbers_eff');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148746,'spell_create_timeless_item');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148762,'spell_spoils_pheromone_cloud');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148811,'spell_secret_ing_waiting_for_food');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148859,'spell_pri_t15_shadow_2p_bonus');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148954,'spell_item_legendary_cloak_animation_reset');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148956,'spell_item_legendary_cloak_animation_reset');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148957,'spell_item_legendary_cloak_animation_reset');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148958,'spell_item_legendary_cloak_animation_reset');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148962,'spell_siege_of_orgrimmar_blade_salvo');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148990,'spell_siegecrafter_energized_defensive_matrix');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (148991,'spell_garrosh_faith_missle');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149011,'spell_garrosh_consumed_courage');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149016,'spell_siegecrafter_conveyor_death_beam_hc');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149032,'spell_garrosh_consumed_hope');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149033,'spell_garrosh_consumed_faith');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149147,'spell_siegecrafter_crawler_mine_fixate');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149148,'spell_siegecrafter_crawler_mine_selector');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149150,'spell_pal_t16_protection_2p_bonus');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149187,'spell_dragonmaw_tidal_wave');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149207,'spell_corrupted_touch');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149207,'spell_corrupted_touch_aura');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149228,'spell_item_celestial_defender');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149254,'spell_hunt_spirit_bond_heal');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149277,'spell_spoils_nova');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149336,'spell_garrosh_blood_frenzied_selector');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149443,'spell_malkorok_ancient_miasma_leave_body');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149501,'spell_juggernaut_ricochet_transform');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149502,'spell_juggernaut_ricochet_remove');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (149536,'spell_garrosh_empowering_corruption_heroic');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (150017,'spell_dru_force_of_nature_rake');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (203751,'spell_halion_summon_exit_portals');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (203755,'spell_sha_searing_flames_proc_aura');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (203778,'spell_warl_grimoire_of_service_server_side');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (203780,'spell_warr_heroic_leap_landing_arua');
+INSERT IGNORE INTO `spell_script_names` (`spell_id`, `ScriptName`) VALUES (203781,'spell_warl_grimoire_of_sacrifice_health_fix');
