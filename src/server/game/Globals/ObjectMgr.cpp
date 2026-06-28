@@ -3189,15 +3189,21 @@ void ObjectMgr::LoadPlayerCreateSpellsData()
                 uint32 classMask = fields[1].GetUInt32();
                 uint32 spellId = fields[2].GetUInt32();
 
+                if (!sSpellMgr->GetSpellInfo(spellId))
+                {
+                    SF_LOG_ERROR("sql.sql", "Spell %u in `%s` does not exist in SpellStore, ignoring.", spellId, tableName.c_str());
+                    continue;
+                }
+
                 if (raceMask != 0 && !(raceMask & RACEMASK_ALL_PLAYABLE))
                 {
-                    SF_LOG_ERROR("sql.sql", "Wrong race mask %u in `playercreateinfo_spell` table, ignoring.", raceMask);
+                    SF_LOG_ERROR("sql.sql", "Wrong race mask %u in `%s` table, ignoring.", raceMask, tableName.c_str());
                     continue;
                 }
 
                 if (classMask != 0 && !(classMask & CLASSMASK_ALL_PLAYABLE))
                 {
-                    SF_LOG_ERROR("sql.sql", "Wrong class mask %u in `playercreateinfo_spell` table, ignoring.", classMask);
+                    SF_LOG_ERROR("sql.sql", "Wrong class mask %u in `%s` table, ignoring.", classMask, tableName.c_str());
                     continue;
                 }
 

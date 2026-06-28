@@ -268,10 +268,8 @@ void WorldSession::HandleLootMoneyOpcode(WorldPacket& /*recvData*/)
 
 struct AELootCreatureCheck
 {
-    static float LootDistance;
-
-    AELootCreatureCheck(Player* looter, uint64 mainLootTarget)
-        : _looter(looter), _mainLootTarget(mainLootTarget) { }
+    AELootCreatureCheck(Player* looter, uint64 mainLootTarget, float lootDistance)
+        : _looter(looter), _mainLootTarget(mainLootTarget), _lootDistance(lootDistance) { }
 
     bool operator()(Creature* creature) const
     {
@@ -281,7 +279,7 @@ struct AELootCreatureCheck
         if (creature->GetGUID() == _mainLootTarget)
             return false;
 
-        if (!_looter->IsWithinDist(creature, LootDistance))
+        if (!_looter->IsWithinDist(creature, _lootDistance))
             return false;
 
         return _looter->isAllowedToLoot(creature);
@@ -289,9 +287,8 @@ struct AELootCreatureCheck
 
     Player* _looter;
     uint64 _mainLootTarget;
+    float _lootDistance;
 };
-
-float AELootCreatureCheck::LootDistance = 30.0f;
 
 void WorldSession::HandleLootOpcode(WorldPacket& recvData)
 {
@@ -322,9 +319,10 @@ void WorldSession::HandleLootOpcode(WorldPacket& recvData)
         return;
 
     std::list<Creature*> corpses;
-    AELootCreatureCheck check(_player, guid);
+    float const lootDistance = sWorld->GetFloatConfig(WorldFloatConfigs::CONFIG_LOOT_AOE_RADIUS);
+    AELootCreatureCheck check(_player, guid, lootDistance);
     Skyfire::CreatureListSearcher<AELootCreatureCheck> searcher(_player, corpses, check);
-    _player->VisitNearbyGridObject(AELootCreatureCheck::LootDistance, searcher);
+    _player->VisitNearbyGridObject(lootDistance, searcher);
 
     WorldPacket data(SMSG_AE_LOOT_TARGETS, 4);
     data << uint32(corpses.size());

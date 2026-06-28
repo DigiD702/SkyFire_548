@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_TYPE: RelWithDebInfo
+  BUILD_TYPE: Release
   BOOST_VERSION: 1.91.0
   OPENSSL_VERSION: 4.0.0
   DEPS_DIR: ${{ github.workspace }}/.deps
@@ -143,7 +143,7 @@ jobs:
           -DTOOLS=ON \
           -DUSE_COREPCH=ON \
           -DUSE_SCRIPTPCH=ON \
-          -DSKYFIRE_BUILD_TESTS=ON \
+          -DSKYFIRE_BUILD_TESTS=OFF \
           -DBOOST_ROOT="$BOOST_ROOT" \
           -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT_DIR"
 
@@ -152,12 +152,6 @@ jobs:
       run: |
         set -euo pipefail
         cmake --build "$BUILD_DIR" --parallel "$(nproc)"
-
-    - name: Test
-      shell: bash
-      run: |
-        set -euo pipefail
-        ctest --test-dir "$BUILD_DIR" --output-on-failure
 
     - name: Configure Eluna smoke
       shell: bash

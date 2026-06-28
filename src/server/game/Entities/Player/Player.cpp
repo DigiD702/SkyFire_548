@@ -18624,6 +18624,12 @@ void Player::learnDefaultSpells()
     for (PlayerCreateInfoSpells::const_iterator itr = info->spell.begin(); itr != info->spell.end(); ++itr)
     {
         uint32 tspell = *itr;
+        if (!sSpellMgr->GetSpellInfo(tspell))
+        {
+            SF_LOG_DEBUG("entities.player.loading", "PLAYER (Class: %u Race: %u): Skipping missing initial spell, id = %u", uint32(getClass()), uint32(getRace()), tspell);
+            continue;
+        }
+
         SF_LOG_DEBUG("entities.player.loading", "PLAYER (Class: %u Race: %u): Adding initial spell, id = %u", uint32(getClass()), uint32(getRace()), tspell);
         if (!IsInWorld())                                    // will send in INITIAL_SPELLS in list anyway at map add
             addSpell(tspell, true, true, true, false);

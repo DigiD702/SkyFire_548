@@ -2734,6 +2734,9 @@ Unit* Unit::GetFirstControlled() const
     // Sequence: charmed, pet, other guardians
     Unit* unit = GetCharm();
     if (!unit)
+        if (uint64 guid = GetPetGUID())
+            unit = ObjectAccessor::GetUnit(*this, guid);
+    if (!unit)
         if (uint64 guid = GetMinionGUID())
             unit = ObjectAccessor::GetUnit(*this, guid);
 

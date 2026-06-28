@@ -652,6 +652,7 @@ void World::LoadConfigSettings(bool reload)
 
     SetFloatConfig(WorldFloatConfigs::CONFIG_GROUP_XP_DISTANCE, sConfigMgr->GetFloatDefault("MaxGroupXPDistance", 74.0f));
     SetFloatConfig(WorldFloatConfigs::CONFIG_MAX_RECRUIT_A_FRIEND_DISTANCE, sConfigMgr->GetFloatDefault("MaxRecruitAFriendBonusDistance", 100.0f));
+    SetFloatConfig(WorldFloatConfigs::CONFIG_LOOT_AOE_RADIUS, sConfigMgr->GetFloatDefault("Loot.AoERadius", 30.0f));
 
     /// @todo Add MonsterSight and GuarderSight (with meaning) in worldserver.conf or put them as define
     SetFloatConfig(WorldFloatConfigs::CONFIG_SIGHT_MONSTER, sConfigMgr->GetFloatDefault("MonsterSight", 50));

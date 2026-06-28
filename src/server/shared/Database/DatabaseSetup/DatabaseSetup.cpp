@@ -580,7 +580,7 @@ namespace Database
             return plan;
         }
 
-        if (options.AutoSetup && !requiredBaseSqlExists)
+        if (plan.ShouldInstallBase && !requiredBaseSqlExists)
         {
             plan.Error = "world database required base SQL file was not found.";
             return plan;

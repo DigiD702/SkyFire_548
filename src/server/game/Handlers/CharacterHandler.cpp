@@ -11,13 +11,16 @@
 #include "CharacterBoost.h"
 #include "Chat.h"
 #include "Common.h"
+#include "Creature.h"
 #include "DatabaseEnv.h"
+#include "DBCStores.h"
 #include "Group.h"
 #include "Guild.h"
 #include "GuildMgr.h"
 #include "Language.h"
 #include "LFGMgr.h"
 #include "Log.h"
+#include "Map.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
 #include "Opcodes.h"
@@ -29,6 +32,8 @@
 #include "ScriptMgr.h"
 #include "SharedDefines.h"
 #include "SocialMgr.h"
+#include "SpellInfo.h"
+#include "SpellMgr.h"
 #include "SystemConfig.h"
 #include "UpdateMask.h"
 #include "Util.h"
@@ -213,6 +218,145 @@ bool LoginQueryHolder::Initialize()
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOAD_BATTLE_PET_SLOTS, stmt);
 
     return res;
+}
+
+namespace
+{
+    struct StarterHunterPetTemplate
+    {
+        uint32 CreatureEntry;
+        uint32 CreatedBySpell;
+    };
+
+    bool GetStarterHunterPetTemplate(PlayerInfo const* info, StarterHunterPetTemplate& starterPet)
+    {
+        if (!info)
+            return false;
+
+        for (uint32 spellId : info->spell_cast)
+        {
+            SpellInfo const* spellInfo = sSpellMgr->GetSpellInfo(spellId);
+            if (!spellInfo)
+                continue;
+
+            for (uint8 effIndex = 0; effIndex < MAX_SPELL_EFFECTS; ++effIndex)
+            {
+                SpellEffectInfo const& effect = spellInfo->Effects[effIndex];
+                if (effect.Effect != SPELL_EFFECT_CREATE_TAMED_PET || effect.MiscValue <= 0)
+                    continue;
+
+                starterPet.CreatureEntry = uint32(effect.MiscValue);
+                starterPet.CreatedBySpell = spellId;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    char const* GetDefaultPetActionBarData()
+    {
+        return "7 2 7 1 7 4 1 0 1 0 1 0 1 0 6 2 6 3 6 0";
+    }
+
+    bool SeedStarterHunterPetRecord(Player* player, PlayerInfo const* info)
+    {
+        if (!player || player->getClass() != CLASS_HUNTER)
+            return false;
+
+        StarterHunterPetTemplate starterPet = { };
+        if (!GetStarterHunterPetTemplate(info, starterPet))
+            return false;
+
+        CreatureTemplate const* creatureInfo = sObjectMgr->GetCreatureTemplate(starterPet.CreatureEntry);
+        if (!creatureInfo || !creatureInfo->IsTameable(player->CanTameExoticPets()))
+            return false;
+
+        uint32 displayId = creatureInfo->GetFirstValidModelId();
+        if (!displayId)
+            return false;
+
+        std::string petName;
+        if (CreatureFamilyEntry const* family = sCreatureFamilyStore.LookupEntry(creatureInfo->family))
+        {
+            if (family->Name)
+                petName = family->Name;
+        }
+
+        if (petName.empty())
+        {
+            petName = creatureInfo->Name;
+        }
+
+        if (petName.size() > 21)
+            petName.resize(21);
+
+        CharacterDatabase.EscapeString(petName);
+
+        uint32 const petNumber = sObjectMgr->GeneratePetNumber();
+        std::ostringstream ss;
+        ss << "INSERT INTO character_pet "
+            << "(id, entry, owner, modelid, CreatedBySpell, PetType, level, exp, Reactstate, name, renamed, active, slot, curhealth, curmana, savetime, abdata, PetSpecId) VALUES ("
+            << petNumber << ','
+            << starterPet.CreatureEntry << ','
+            << player->GetGUIDLow() << ','
+            << displayId << ','
+            << starterPet.CreatedBySpell << ','
+            << static_cast<uint32>(PetType::HUNTER_PET) << ','
+            << uint32(player->getLevel()) << ','
+            << "0,"
+            << uint32(REACT_DEFENSIVE) << ",'"
+            << petName << "',"
+            << "0,"
+            << "1,"
+            << uint32(PET_SAVE_AS_CURRENT) << ','
+            << "4294967295,"
+            << "0,"
+            << uint32(time(NULL)) << ",'"
+            << GetDefaultPetActionBarData() << "',"
+            << "0)";
+
+        std::string sql = ss.str();
+        CharacterDatabase.DirectExecute(sql.c_str());
+
+        SF_LOG_INFO("entities.pet", "Seeded starter hunter pet entry %u for player %s (GUID: %u) from spell %u.",
+            starterPet.CreatureEntry, player->GetName().c_str(), player->GetGUIDLow(), starterPet.CreatedBySpell);
+        return true;
+    }
+
+    bool CreateStarterHunterPet(Player* player, PlayerInfo const* info)
+    {
+        if (!player || !info || player->getClass() != CLASS_HUNTER || player->GetPet())
+            return false;
+
+        StarterHunterPetTemplate starterPet = { };
+        if (!GetStarterHunterPetTemplate(info, starterPet))
+            return false;
+
+        Pet* pet = player->CreateTamedPetFrom(starterPet.CreatureEntry, starterPet.CreatedBySpell);
+        if (!pet)
+            return false;
+
+        float x, y, z;
+        player->GetClosePoint(x, y, z, pet->GetObjectSize(), PET_FOLLOW_DIST, pet->GetFollowAngle());
+        pet->Relocate(x, y, z, player->GetOrientation());
+
+        if (!pet->IsPositionValid())
+        {
+            delete pet;
+            return false;
+        }
+
+        pet->GetMap()->AddToMap(pet->ToCreature());
+        player->SetMinion(pet, true);
+        pet->InitTalentForLevel();
+        pet->SavePetToDB(PET_SAVE_AS_CURRENT);
+        player->PetSpellInitialize();
+
+        SF_LOG_INFO("entities.pet", "Created starter hunter pet entry %u for player %s (GUID: %u) from spell %u.",
+            pet->GetEntry(), player->GetName().c_str(), player->GetGUIDLow(), starterPet.CreatedBySpell);
+        return true;
+    }
 }
 
 namespace
@@ -735,9 +879,8 @@ void WorldSession::HandleCharEnumOpcode(WorldPacket& /*recvData*/)
     else
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_SEL_ENUM);
 
-    stmt->setUInt8(0, PET_SAVE_AS_CURRENT);
-    stmt->setUInt32(1, GetAccountId());
-    stmt->setUInt32(2, GetVirtualRealmID());
+    stmt->setUInt32(0, GetAccountId());
+    stmt->setUInt32(1, GetVirtualRealmID());
 
     _charEnumCallback = CharacterDatabase.AsyncQuery(stmt);
 }
@@ -1139,6 +1282,9 @@ void WorldSession::HandleCharCreateCallback(PreparedQueryResult result, Characte
 
             // Player created, save it now
             newChar.SaveToDB(true);
+            if (PlayerInfo const* info = sObjectMgr->GetPlayerInfo(newChar.getRace(), newChar.getClass()))
+                SeedStarterHunterPetRecord(&newChar, info);
+
             createInfo->CharCount += 1;
 
             SQLTransaction trans = LoginDatabase.BeginTransaction();
@@ -1548,14 +1694,46 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder* holder)
         SendNotification(LANG_RESET_TALENTS);
     }
 
-    bool firstLogin = pCurrChar->HasAtLoginFlag(AT_LOGIN_FIRST);
+    bool const firstLogin = pCurrChar->HasAtLoginFlag(AT_LOGIN_FIRST);
     if (firstLogin)
     {
         pCurrChar->RemoveAtLoginFlag(AT_LOGIN_FIRST);
 
-        PlayerInfo const* info = sObjectMgr->GetPlayerInfo(pCurrChar->getRace(), pCurrChar->getClass());
-        for (uint32 spellId : info->spell_cast)
-            pCurrChar->CastSpell(pCurrChar, spellId, true);
+        if (PlayerInfo const* info = sObjectMgr->GetPlayerInfo(pCurrChar->getRace(), pCurrChar->getClass()))
+        {
+            StarterHunterPetTemplate starterPet = { };
+            bool const hasStarterHunterPet = pCurrChar->getClass() == CLASS_HUNTER && pCurrChar->GetPet() &&
+                GetStarterHunterPetTemplate(info, starterPet);
+
+            for (uint32 spellId : info->spell_cast)
+            {
+                if (hasStarterHunterPet && spellId == starterPet.CreatedBySpell)
+                    continue;
+
+                pCurrChar->CastSpell(pCurrChar, spellId, true);
+            }
+
+            if (pCurrChar->getClass() == CLASS_HUNTER)
+            {
+                if (Pet* pet = pCurrChar->GetPet())
+                {
+                    pet->SavePetToDB(PET_SAVE_AS_CURRENT);
+                }
+                else
+                {
+                    pCurrChar->LoadPet();
+                    if (!pCurrChar->GetPet())
+                    {
+                        Pet* storedPet = new Pet(pCurrChar);
+                        if (!storedPet->LoadPetFromDB(pCurrChar))
+                            delete storedPet;
+                    }
+
+                    if (!pCurrChar->GetPet())
+                        CreateStarterHunterPet(pCurrChar, info);
+                }
+            }
+        }
     }
 
     // show time before shutdown if shutdown planned.

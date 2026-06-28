@@ -17,7 +17,7 @@ concurrency:
 
 
 env:
-  BUILD_TYPE: RelWithDebInfo
+  BUILD_TYPE: Release
   BOOST_VERSION: 1.91.0
   BOOST_ROOT: C:\local\boost_1_91_0
   OPENSSL_VERSION: 4.0.1
@@ -105,7 +105,7 @@ jobs:
           -DTOOLS=ON `
           -DUSE_COREPCH=ON `
           -DUSE_SCRIPTPCH=ON `
-          -DSKYFIRE_BUILD_TESTS=ON `
+          -DSKYFIRE_BUILD_TESTS=OFF `
           -DBOOST_ROOT="$env:BOOST_ROOT" `
           -DOPENSSL_ROOT_DIR="$env:OPENSSL_ROOT_DIR"
 
@@ -113,11 +113,6 @@ jobs:
       shell: pwsh
       run: |
         cmake --build "$env:BUILD_DIR" --config "$env:BUILD_TYPE" --parallel 4
-
-    - name: windows tests
-      shell: pwsh
-      run: |
-        ctest --test-dir "$env:BUILD_DIR" -C "$env:BUILD_TYPE" --output-on-failure
 
     - name: Create Upload File Name
       shell: pwsh

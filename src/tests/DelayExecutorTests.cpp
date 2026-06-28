@@ -6,9 +6,11 @@
 #include "DelayExecutor.h"
 
 #include <condition_variable>
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <thread>
 
 namespace
 {
@@ -50,6 +52,21 @@ namespace
             {
                 return count >= expected;
             });
+    }
+
+    bool WaitForExecutorMetrics(DelayExecutor& executor, uint64 submitted, uint64 completed, uint32 backlog)
+    {
+        std::chrono::steady_clock::time_point const deadline = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+        while (std::chrono::steady_clock::now() < deadline)
+        {
+            DelayExecutorMetricsSnapshot snapshot = executor.GetMetricsSnapshot();
+            if (snapshot.Submitted == submitted && snapshot.Completed == completed && snapshot.Backlog == backlog)
+                return true;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+
+        return false;
     }
 }
 
@@ -124,6 +141,12 @@ int main()
         return 1;
     }
 
+    if (!WaitForExecutorMetrics(executor, 1, 1, 0))
+    {
+        std::cerr << "DelayExecutor did not finish executor-side metrics after queued work\n";
+        return 1;
+    }
+
     DelayExecutorMetricsSnapshot completedAfterRun = executor.GetMetricsSnapshot();
     if (completedAfterRun.Completed != 1 || completedAfterRun.Backlog != 0 || completedAfterRun.BacklogHighWater != 1)
     {
@@ -193,6 +216,12 @@ int main()
     if (!WaitForCount(executed, 2, executedLock, executedChanged))
     {
         std::cerr << "DelayExecutor did not execute work after restart\n";
+        return 1;
+    }
+
+    if (!WaitForExecutorMetrics(executor, 1, 1, 0))
+    {
+        std::cerr << "DelayExecutor did not finish executor-side metrics after restart\n";
         return 1;
     }
 

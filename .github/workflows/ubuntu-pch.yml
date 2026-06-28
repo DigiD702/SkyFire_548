@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUILD_TYPE: RelWithDebInfo
+  BUILD_TYPE: Release
   BOOST_VERSION: 1.91.0
   OPENSSL_VERSION: 4.0.0
   DEPS_DIR: ${{ github.workspace }}/.deps
