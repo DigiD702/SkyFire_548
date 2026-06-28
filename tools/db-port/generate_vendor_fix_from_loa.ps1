@@ -6,7 +6,7 @@
 param(
     [string]$Database = 'world',
     [string]$LoaDatabase = 'loa',
-    [string]$OutputFile = '2026-06-27_world_02.sql'
+    [string]$OutputFile = '2026-06-27_world_09.sql'
 )
 
 . (Join-Path $PSScriptRoot 'config.ps1')

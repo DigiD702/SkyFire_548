@@ -167,7 +167,10 @@ Applied `2026-06-26_MANIFEST.txt` to `world_validate` (imported from `sql/world.
 | `2026-06-25_world_69.sql` | LOA instances | creature_template AIName/ScriptName sync dungeon/raids | loa | staging applied |
 | `2026-06-25_world_70.sql` | LOA instances | SmartAI waypoints for dungeon/raid maps | loa | staging applied |
 | `2026-06-25_world_71.sql` | LOA instances | Remove unloadable SmartAI on dungeon/raid maps | cleanup | staging applied |
-| `2026-06-27_world_02.sql` | All maps | Import missing `npc_vendor` rows from LOA (global vendors; excludes Shrine 64001–64099) | loa | `generate_vendor_fix_from_loa.ps1` |
+| `2026-06-27_world_00.sql` | Login/play | Hunter starting pet spell_cast cleanup (upstream) | upstream | — |
+| `2026-06-27_world_01.sql` | Login/play | Remove obsolete playercreateinfo_spell rows (upstream) | upstream | — |
+| `2026-06-27_world_02.sql` | Map 0 | Bellygrub (345): remove 3 stacked duplicate Redridge spawns | cleanup | SFDB baseline |
+| `2026-06-27_world_09.sql` | All maps | Import missing `npc_vendor` rows from LOA (global vendors; excludes Shrine 64001–64099) | loa | `generate_vendor_fix_from_loa.ps1` |
 | `2026-06-27_world_03.sql` | Map 870 | `creature_text` for Shrine Hearthstone NPCs 64071/64072/64115 (SmartAI OOC talk) | wiki | manual |
 | `2026-06-27_world_04_shrine_npc_vendor.sql` | Map 870 | Shrine vendor stock `npc_vendor` 64001–64099 (LOA) | loa | slice of vendor import |
 | `2026-06-27_world_05.sql` | All maps | **Static** spawn dedup (1958 guids). Apply after all `creature_map*.sql` | cleanup | committed SQL |
