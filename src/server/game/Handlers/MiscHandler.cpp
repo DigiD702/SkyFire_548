@@ -2488,22 +2488,6 @@ void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)
 
 namespace
 {
-    bool UsesClientDb2Only(uint32 type)
-    {
-        switch (type)
-        {
-            case DB2_REPLY_ITEM:
-            case DB2_REPLY_ITEM_SPARSE:
-            case DB2_REPLY_ITEMEXTENDEDCOST:
-            case DB2_REPLY_ITEMCURRENCYCOST:
-            case DB2_REPLY_SCENESCRIPTPACKAGE:
-            case DB2_REPLY_BROADCASTTEXT:
-                return true;
-            default:
-                return false;
-        }
-    }
-
     // No server DB2 loaded — replying (even with size 0) can crash the 5.4.8 client.
     bool AlwaysSkipHotfixReply(uint32 type)
     {
@@ -2646,25 +2630,6 @@ void WorldSession::HandleRequestHotfix(WorldPacket& recvPacket)
         recvPacket.ReadGuidBytes(guids[i], 0, 5, 6, 4, 7, 2, 3);
     }
 
-    // Several DB2 stores use default serializers that do not match their on-disk
-    // layouts (string fields vs uint32-only structs). Shrine vendor hubs trigger
-    // large hotfix bursts; force the client to use local DBC for item tables.
-    if (UsesClientDb2Only(type))
-    {
-        for (uint32 i = 0; i < count; ++i)
-        {
-            if (!ShouldSendHotfixReply(type, entries[i]))
-            {
-                SF_LOG_INFO("network", "CMSG_REQUEST_HOTFIX: skipped entry %u type %u", entries[i], type);
-                continue;
-            }
-
-            SendEmptyDbReply(this, entries[i], type, "client uses DBC");
-        }
-
-        return;
-    }
-
     if (knownUnsupportedType)
     {
         for (uint32 i = 0; i < count; ++i)
@@ -2698,10 +2663,7 @@ void WorldSession::HandleRequestHotfix(WorldPacket& recvPacket)
         }
 
         if (!store->HasRecord(entries[i]))
-        {
-            SendEmptyDbReply(this, entries[i], type, "no store record");
             continue;
-        }
 
         ByteBuffer record;
         store->WriteRecord(entries[i], (uint32)GetSessionDbcLocale(), record);
