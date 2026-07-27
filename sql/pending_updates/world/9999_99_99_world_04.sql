@@ -1,4 +1,4 @@
-﻿-- Set QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT on quests completed by spell effects.
+-- Set QUEST_SPECIAL_FLAGS_EXPLORATION_OR_EVENT on quests completed by spell effects.
 UPDATE `quest_template` SET `SpecialFlags` = `SpecialFlags` | 0x2 WHERE `Id` IN (
 28106,
 29604,

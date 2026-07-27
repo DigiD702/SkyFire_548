@@ -40,9 +40,3 @@ UPDATE `gossip_menu_option` SET `ActionPoiID`=99 WHERE `ActionPoiID`=601; -- Hun
 UPDATE `gossip_menu_option` SET `ActionPoiID`=265 WHERE `ActionPoiID`=602; -- Mage
 UPDATE `gossip_menu_option` SET `ActionPoiID`=266 WHERE `ActionPoiID`=603; -- Priest (closest)
 UPDATE `gossip_menu_option` SET `ActionPoiID`=32 WHERE `ActionPoiID`=609; -- Lion's Rest / The Park
-
--- Clear ActionPoiID only where target still missing and no safe remap remains.
-UPDATE `gossip_menu_option` g
-LEFT JOIN `points_of_interest` p ON p.entry = g.ActionPoiID
-SET g.ActionPoiID = 0
-WHERE g.ActionPoiID > 0 AND p.entry IS NULL;
